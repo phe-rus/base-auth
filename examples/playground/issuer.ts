@@ -10,6 +10,7 @@ import { PasswordProvider } from "@base-auth/core/provider/password"
 import { PasswordUI } from "@base-auth/core/ui/password"
 import { drizzleAdapter } from "@base-auth/adapter-drizzle"
 import { UsernamePlugin } from "@base-auth/username"
+import { RolesPlugin, getUserRole } from "@base-auth/roles"
 import { schema } from "./schema.js"
 
 // Local playground: runs the issuer straight off `shared/core/src` (via the
@@ -28,6 +29,7 @@ const adapter = drizzleAdapter(db, { provider: "sqlite", schema })
 const subjects = createSubjects({
   user: object({
     id: string(),
+    role: string(),
   }),
 })
 
@@ -35,7 +37,7 @@ const app = issuer({
   subjects,
   storage: MemoryStorage(),
   adapter,
-  plugins: [UsernamePlugin()],
+  plugins: [UsernamePlugin(), RolesPlugin()],
   providers: {
     password: PasswordProvider(
       PasswordUI({
@@ -51,7 +53,8 @@ const app = issuer({
         providerId: "password",
         accountId: value.email,
       })
-      return ctx.subject("user", { id: user.id })
+      const role = await getUserRole(adapter, user.id)
+      return ctx.subject("user", { id: user.id, role })
     }
     throw new Error("Invalid provider")
   },

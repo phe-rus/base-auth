@@ -11,7 +11,12 @@
 import { generateSqliteSchema } from "@base-auth/adapter-drizzle"
 import { coreModels } from "@base-auth/core/adapter"
 import { usernameModels } from "@base-auth/username"
+import { roleModels } from "@base-auth/roles"
 
-const generated = generateSqliteSchema({ ...coreModels, ...usernameModels })
-export const { user, account, username } = generated
+const generated = generateSqliteSchema({
+  ...coreModels,
+  ...usernameModels,
+  ...roleModels,
+})
+export const { user, account, username, role } = generated
 export const schema = generated

@@ -9,6 +9,7 @@
   "dependencies": {
     "@base-auth/adapter-drizzle": "workspace:*",
     "@base-auth/core": "workspace:*",
+    "@base-auth/roles": "workspace:*",
     "@base-auth/username": "workspace:*",
     "drizzle-orm": "0.45.2",
     "valibot": "1.4.2"
