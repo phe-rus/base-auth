@@ -6,7 +6,6 @@
     "build": "bun run script/build.ts",
     "test": "bun test"
   },
-  "sideEffects": false,
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260708.1",
     "@tsconfig/node22": "22.0.5",
@@ -20,46 +19,67 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js",
       "types": "./dist/types/index.d.ts"
     },
     "./*": {
       "bun": "./src/*.ts",
       "import": "./dist/esm/*.js",
+      "default": "./dist/esm/*.js",
       "types": "./dist/types/*.d.ts"
+    },
+    "./adapter": {
+      "bun": "./src/adapter/index.ts",
+      "import": "./dist/esm/adapter/index.js",
+      "default": "./dist/esm/adapter/index.js",
+      "types": "./dist/types/adapter/index.d.ts"
+    },
+    "./plugin": {
+      "bun": "./src/plugin/index.ts",
+      "import": "./dist/esm/plugin/index.js",
+      "default": "./dist/esm/plugin/index.js",
+      "types": "./dist/types/plugin/index.d.ts"
     },
     "./ui": {
       "bun": "./src/ui/base.tsx",
       "import": "./dist/esm/ui/index.js",
+      "default": "./dist/esm/ui/index.js",
       "types": "./dist/types/ui/index.d.ts"
     },
     "./ui/base": {
       "bun": "./src/ui/base.tsx",
       "import": "./dist/esm/ui/base.js",
+      "default": "./dist/esm/ui/base.js",
       "types": "./dist/types/ui/base.d.ts"
     },
     "./ui/code": {
       "bun": "./src/ui/code.tsx",
       "import": "./dist/esm/ui/code.js",
+      "default": "./dist/esm/ui/code.js",
       "types": "./dist/types/ui/code.d.ts"
     },
     "./ui/form": {
       "bun": "./src/ui/form.tsx",
       "import": "./dist/esm/ui/form.js",
+      "default": "./dist/esm/ui/form.js",
       "types": "./dist/types/ui/form.d.ts"
     },
     "./ui/icon": {
       "bun": "./src/ui/icon.tsx",
       "import": "./dist/esm/ui/icon.js",
+      "default": "./dist/esm/ui/icon.js",
       "types": "./dist/types/ui/icon.d.ts"
     },
     "./ui/password": {
       "bun": "./src/ui/password.tsx",
       "import": "./dist/esm/ui/password.js",
+      "default": "./dist/esm/ui/password.js",
       "types": "./dist/types/ui/password.d.ts"
     },
     "./ui/select": {
       "bun": "./src/ui/select.tsx",
       "import": "./dist/esm/ui/select.js",
+      "default": "./dist/esm/ui/select.js",
       "types": "./dist/types/ui/select.d.ts"
     }
   },

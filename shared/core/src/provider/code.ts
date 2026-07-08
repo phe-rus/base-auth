@@ -54,7 +54,7 @@
  */
 import { Context } from "hono"
 import { Provider } from "./provider.js"
-import { generateUnbiasedDigits, timingSafeCompare } from "../random.js"
+import { generateUnbiasedDigits, timingSafeCompare } from "../util/random.js"
 
 export interface CodeProviderConfig<
   Claims extends Record<string, string> = Record<string, string>,

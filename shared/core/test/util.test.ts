@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Context } from "hono"
-import { getRelativeUrl, isDomainMatch } from "../src/util.js"
+import { getRelativeUrl, isDomainMatch } from "../src/util/index.js"
 
 test("isDomainMatch", () => {
   // Basic matches

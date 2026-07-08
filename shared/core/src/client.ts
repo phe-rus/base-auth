@@ -53,7 +53,7 @@ import {
   InvalidRefreshTokenError,
   InvalidSubjectError,
 } from "./error.js"
-import { generatePKCE } from "./pkce.js"
+import { generatePKCE } from "./util/pkce.js"
 
 /**
  * The well-known information for an OAuth 2.0 authorization server.

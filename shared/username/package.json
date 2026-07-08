@@ -1,5 +1,5 @@
 {
-  "name": "@base-auth/adapter-drizzle",
+  "name": "@base-auth/username",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -12,14 +12,16 @@
       "default": "./src/index.ts"
     }
   },
-  "dependencies": {
+  "peerDependencies": {
     "@base-auth/core": "workspace:*",
-    "drizzle-orm": "0.45.2"
+    "hono": "^4"
   },
   "devDependencies": {
+    "@base-auth/adapter-drizzle": "workspace:*",
     "@tsconfig/node22": "22.0.5",
     "@types/bun": "latest",
     "@types/node": "26.1.1",
+    "drizzle-orm": "0.45.2",
     "typescript": "6.0.3"
   },
   "files": ["src"]

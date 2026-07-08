@@ -87,7 +87,7 @@
  * @packageDocumentation
  */
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { Prettify } from "./util.js"
+import { Prettify } from "./util/index.js"
 
 /**
  * Subject schema is a map of types that are used to define the subjects.

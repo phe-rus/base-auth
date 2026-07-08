@@ -40,7 +40,7 @@
 import { UnknownStateError } from "../error.js"
 import { Storage } from "../storage/storage.js"
 import { Provider } from "./provider.js"
-import { generateUnbiasedDigits, timingSafeCompare } from "../random.js"
+import { generateUnbiasedDigits, timingSafeCompare } from "../util/random.js"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 
 /**
@@ -605,7 +605,7 @@ export function PBKDF2Hasher(opts?: { iterations?: number }): PasswordHasher<{
   }
 }
 import { timingSafeEqual, randomBytes, scrypt } from "node:crypto"
-import { getRelativeUrl } from "../util.js"
+import { getRelativeUrl } from "../util/index.js"
 
 /**
  * @internal

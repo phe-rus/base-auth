@@ -3,11 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun --watch issuer.ts"
+    "dev": "bun --watch issuer.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@base-auth/adapter-drizzle": "workspace:*",
     "@base-auth/core": "workspace:*",
+    "@base-auth/username": "workspace:*",
+    "drizzle-orm": "0.45.2",
     "valibot": "1.4.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.10"
   }
 }

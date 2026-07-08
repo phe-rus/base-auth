@@ -1,3 +1,5 @@
-export { createDb, migrateDb, type Db } from "./client.js"
-export { findOrCreateUserByAccount } from "./identity.js"
-export * as schema from "./schema.js"
+export { drizzleAdapter, type DrizzleAdapterOptions } from "./drizzle-adapter.js"
+export {
+  generateSqliteSchema,
+  type GenerateSqliteSchemaOptions,
+} from "./generate-sqlite-schema.js"

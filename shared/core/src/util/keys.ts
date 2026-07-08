@@ -8,7 +8,7 @@ import {
   JWK,
   CryptoKey,
 } from "jose"
-import { Storage, StorageAdapter } from "./storage/storage.js"
+import { Storage, StorageAdapter } from "../storage/storage.js"
 
 const signingAlg = "ES256"
 const encryptionAlg = "RSA-OAEP-512"

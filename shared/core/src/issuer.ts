@@ -193,15 +193,17 @@ import {
 } from "./error.js"
 import { compactDecrypt, CompactEncrypt, jwtVerify, SignJWT } from "jose"
 import { Storage, StorageAdapter } from "./storage/storage.js"
-import { encryptionKeys, legacySigningKeys, signingKeys } from "./keys.js"
-import { validatePKCE } from "./pkce.js"
+import { encryptionKeys, legacySigningKeys, signingKeys } from "./util/keys.js"
+import { validatePKCE } from "./util/pkce.js"
 import { Select } from "./ui/select.js"
 import { setTheme, Theme } from "./ui/theme.js"
-import { getRelativeUrl, isDomainMatch, lazy } from "./util.js"
+import { getRelativeUrl, isDomainMatch, lazy } from "./util/index.js"
 import { DynamoStorage } from "./storage/dynamo.js"
 import { MemoryStorage } from "./storage/memory.js"
 import { cors } from "hono/cors"
 import { logger } from "hono/logger"
+import type { Plugin } from "./plugin/index.js"
+import type { Adapter } from "./adapter/adapter.js"
 
 /** @internal */
 export const aws = awsHandle
@@ -436,6 +438,39 @@ export interface IssuerInput<
     },
     req: Request,
   ): Promise<boolean>
+  /**
+   * The adapter used to store durable data - users, and whatever a plugin's
+   * own models need. Configured once here; every plugin receives it
+   * automatically rather than taking its own `db`.
+   *
+   * @example
+   * ```ts title="issuer.ts"
+   * import { drizzleAdapter } from "@base-auth/adapter-drizzle"
+   * import { db, schema } from "./db.js"
+   *
+   * issuer({
+   *   adapter: drizzleAdapter(db, { provider: "sqlite", schema })
+   *   // ...
+   * })
+   * ```
+   */
+  adapter?: Adapter
+  /**
+   * Opt-in plugins that mount their own routes on the issuer, for
+   * capabilities like managing a username or role alongside authentication.
+   *
+   * @example
+   * ```ts
+   * import { UsernamePlugin } from "@base-auth/username"
+   *
+   * issuer({
+   *   adapter: ...,
+   *   plugins: [UsernamePlugin()]
+   *   // ...
+   * })
+   * ```
+   */
+  plugins?: Plugin[]
 }
 
 /**
@@ -742,6 +777,21 @@ export function issuer<
       ...auth,
     })
     app.route(`/${name}`, route)
+  }
+
+  const reserved = new Set(["token", "authorize", "userinfo", ".well-known"])
+  const mounted = new Set(Object.keys(input.providers))
+  if (input.plugins?.length && !input.adapter)
+    throw new Error("Plugins are configured but no `adapter` was provided")
+  for (const plugin of input.plugins ?? []) {
+    if (reserved.has(plugin.name) || mounted.has(plugin.name))
+      throw new Error(
+        `Plugin name "${plugin.name}" collides with a provider or a reserved issuer route`,
+      )
+    mounted.add(plugin.name)
+    const route = new Hono<any>()
+    plugin.init(route, { adapter: input.adapter! })
+    app.route(`/${plugin.name}`, route)
   }
 
   app.get(

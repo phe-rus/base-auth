@@ -23,7 +23,7 @@ import { WellKnown } from "../client.js"
 import { OauthError } from "../error.js"
 import { Provider } from "./provider.js"
 import { JWTPayload } from "hono/utils/jwt/types"
-import { getRelativeUrl, lazy } from "../util.js"
+import { getRelativeUrl, lazy } from "../util/index.js"
 
 export interface OidcConfig {
   /**
