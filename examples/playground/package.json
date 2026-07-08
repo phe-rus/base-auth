@@ -1,0 +1,13 @@
+{
+  "name": "@base-auth/example-playground",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch issuer.ts"
+  },
+  "dependencies": {
+    "@base-auth/adapter-drizzle": "workspace:*",
+    "@base-auth/core": "workspace:*",
+    "valibot": "1.4.2"
+  }
+}
