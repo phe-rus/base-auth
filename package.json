@@ -9,7 +9,7 @@
     "examples/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --filter=@base-auth/example-playground",
+    "dev": "turbo run dev",
     "build": "turbo run build --filter=@base-auth/core",
     "test": "turbo run test --filter=@base-auth/core",
     "release": "bun run --filter=\"@base-auth/core\" build && changeset publish"

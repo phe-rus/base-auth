@@ -17,70 +17,70 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js",
-      "types": "./dist/types/index.d.ts"
+      "default": "./dist/esm/index.js"
     },
     "./*": {
+      "types": "./dist/types/*.d.ts",
       "bun": "./src/*.ts",
       "import": "./dist/esm/*.js",
-      "default": "./dist/esm/*.js",
-      "types": "./dist/types/*.d.ts"
+      "default": "./dist/esm/*.js"
     },
     "./adapter": {
+      "types": "./dist/types/adapter/index.d.ts",
       "bun": "./src/adapter/index.ts",
       "import": "./dist/esm/adapter/index.js",
-      "default": "./dist/esm/adapter/index.js",
-      "types": "./dist/types/adapter/index.d.ts"
+      "default": "./dist/esm/adapter/index.js"
     },
     "./plugin": {
+      "types": "./dist/types/plugin/index.d.ts",
       "bun": "./src/plugin/index.ts",
       "import": "./dist/esm/plugin/index.js",
-      "default": "./dist/esm/plugin/index.js",
-      "types": "./dist/types/plugin/index.d.ts"
+      "default": "./dist/esm/plugin/index.js"
     },
     "./ui": {
+      "types": "./dist/types/ui/index.d.ts",
       "bun": "./src/ui/base.tsx",
       "import": "./dist/esm/ui/index.js",
-      "default": "./dist/esm/ui/index.js",
-      "types": "./dist/types/ui/index.d.ts"
+      "default": "./dist/esm/ui/index.js"
     },
     "./ui/base": {
+      "types": "./dist/types/ui/base.d.ts",
       "bun": "./src/ui/base.tsx",
       "import": "./dist/esm/ui/base.js",
-      "default": "./dist/esm/ui/base.js",
-      "types": "./dist/types/ui/base.d.ts"
+      "default": "./dist/esm/ui/base.js"
     },
     "./ui/code": {
+      "types": "./dist/types/ui/code.d.ts",
       "bun": "./src/ui/code.tsx",
       "import": "./dist/esm/ui/code.js",
-      "default": "./dist/esm/ui/code.js",
-      "types": "./dist/types/ui/code.d.ts"
+      "default": "./dist/esm/ui/code.js"
     },
     "./ui/form": {
+      "types": "./dist/types/ui/form.d.ts",
       "bun": "./src/ui/form.tsx",
       "import": "./dist/esm/ui/form.js",
-      "default": "./dist/esm/ui/form.js",
-      "types": "./dist/types/ui/form.d.ts"
+      "default": "./dist/esm/ui/form.js"
     },
     "./ui/icon": {
+      "types": "./dist/types/ui/icon.d.ts",
       "bun": "./src/ui/icon.tsx",
       "import": "./dist/esm/ui/icon.js",
-      "default": "./dist/esm/ui/icon.js",
-      "types": "./dist/types/ui/icon.d.ts"
+      "default": "./dist/esm/ui/icon.js"
     },
     "./ui/password": {
+      "types": "./dist/types/ui/password.d.ts",
       "bun": "./src/ui/password.tsx",
       "import": "./dist/esm/ui/password.js",
-      "default": "./dist/esm/ui/password.js",
-      "types": "./dist/types/ui/password.d.ts"
+      "default": "./dist/esm/ui/password.js"
     },
     "./ui/select": {
+      "types": "./dist/types/ui/select.d.ts",
       "bun": "./src/ui/select.tsx",
       "import": "./dist/esm/ui/select.js",
-      "default": "./dist/esm/ui/select.js",
-      "types": "./dist/types/ui/select.d.ts"
+      "default": "./dist/esm/ui/select.js"
     }
   },
   "peerDependencies": {

@@ -1,7 +1,0 @@
-{
-  "name": "@base-auth/example-custom-frontend-issuer",
-  "version": "0.0.0",
-  "dependencies": {
-    "@base-auth/core": "workspace:*"
-  }
-}

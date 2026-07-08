@@ -1,0 +1,16 @@
+{
+  "name": "@base-auth/example-hono",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@base-auth/core": "workspace:*",
+    "valibot": "1.4.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260708.1",
+    "wrangler": "4.107.1"
+  }
+}

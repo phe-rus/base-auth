@@ -60,9 +60,9 @@ const app = issuer({
   },
 })
 
-console.log("[playground] issuer running at http://localhost:3000")
+console.log("[playground] issuer running at http://localhost:3005")
 
 export default {
-  port: 3000,
+  port: 3005,
   fetch: app.fetch,
 }

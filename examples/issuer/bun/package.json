@@ -1,7 +1,0 @@
-{
-  "name": "@base-auth/example-issuer-bun",
-  "version": "0.0.0",
-  "dependencies": {
-    "@base-auth/core": "workspace:*"
-  }
-}

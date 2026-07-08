@@ -1,28 +1,7 @@
 # Examples
 
-There are two sets of examples here, issuers and clients. Issuers are examples of setting up an OpenAuth server. The clients are examples of using OpenAuth in a client application and work with any of the issuer servers.
+- **`playground`** - the local dev loop for this repo. Runs the issuer straight off `shared/*/src` (no build step), with the Drizzle adapter and the `username`/`roles` plugins wired up. `bun run dev` from the repo root starts it on `:3005`.
+- **`hono`** - the issuer, deployed as a Cloudflare Worker (KV storage, password provider). `cd examples/hono && bun run dev` (via `wrangler dev`).
+- **`tanstack-start`** - a client app (TanStack Start, also Cloudflare Workers) that authenticates against an issuer using `@base-auth/core/client` - sign-in, server-side code exchange, a protected profile route. `cd examples/tanstack-start && bun run dev` on `:3001`. Points at `examples/hono`'s dev URL by default.
 
-The fastest way to play around is to use the bun issuer. You can bring it up with:
-
-```shell
-$ bun run --hot ./issuer/bun/issuer.ts
-```
-
-You might have to install some workspace packages first, run this in the root:
-
-```shell
-$ bun install
-$ cd packages/openauth
-$ bun run build
-```
-
-This will bring it up on port 3000. Then try one of the clients - for example the astro one.
-
-```
-$ cd client/astro
-$ bun dev
-```
-
-Now visit `http://localhost:4321` (the astro app) and experience the auth flow.
-
-Or head over to `http://localhost:3000/password/authorize` to try the password flow directly.
+`www` (the marketing/docs site) runs on `:3000`. Running `bun run dev` from the repo root starts all of these together.

@@ -1,9 +1,6 @@
 # build output
+.output/
 dist/
-# generated types
-.astro/
-# doc output
-output/
 
 # dependencies
 node_modules/
@@ -20,3 +17,5 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+.wrangler

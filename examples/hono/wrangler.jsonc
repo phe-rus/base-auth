@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "base-auth-example-hono",
+  "main": "issuer.ts",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KV",
+      "id": "placeholder-run-wrangler-kv-namespace-create"
+    }
+  ]
+}
