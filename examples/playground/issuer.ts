@@ -42,8 +42,8 @@ const app = issuer({
   providers: {
     password: PasswordProvider(
       PasswordUI({
-        sendCode: async (email, code) => {
-          console.log(`[playground] code for ${email}: ${code}`)
+        sendCode: async ({ email, code, url }) => {
+          console.log(`[playground] code for ${email}: ${code} (${url})`)
         },
       }),
     ),

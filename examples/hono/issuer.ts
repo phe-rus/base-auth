@@ -4,10 +4,7 @@ import { CloudflareStorage } from "@base-auth/core/storage/cloudflare"
 import { PasswordProvider } from "@base-auth/core/provider/password"
 import { PasswordUI } from "@base-auth/core/ui/password"
 import { object, string } from "valibot"
-import type {
-  ExecutionContext,
-  KVNamespace,
-} from "@cloudflare/workers-types"
+import type { ExecutionContext, KVNamespace } from "@cloudflare/workers-types"
 
 // Proves @base-auth/core's issuer() running as an actual Cloudflare Worker,
 // using the storage adapter this package ships for exactly this target
@@ -35,8 +32,8 @@ export default {
       providers: {
         password: PasswordProvider(
           PasswordUI({
-            sendCode: async (email, code) => {
-              console.log(`[hono example] code for ${email}: ${code}`)
+            sendCode: async ({ email, code, url }) => {
+              console.log(`[hono example] code for ${email}: ${code} (${url})`)
             },
           }),
         ),

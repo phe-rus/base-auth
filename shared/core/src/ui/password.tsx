@@ -144,7 +144,7 @@ type PasswordUICopy = typeof DEFAULT_COPY
  */
 export interface PasswordUIOptions extends Pick<
   PasswordConfig,
-  "sendCode" | "validatePassword" | "verify"
+  "sendCode" | "sendResetCode" | "validatePassword" | "verify"
 > {
   /**
    * Custom copy for the UI.
@@ -164,6 +164,7 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
   return {
     validatePassword: input.validatePassword,
     sendCode: input.sendCode,
+    sendResetCode: input.sendResetCode,
     verify: input.verify,
     login: async (_req, form, error): Promise<Response> => {
       const jsx = (

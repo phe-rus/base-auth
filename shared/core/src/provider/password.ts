@@ -13,7 +13,7 @@
  *         copy: {
  *           error_email_taken: "This email is already taken."
  *         },
- *         sendCode: (email, code) => console.log(email, code)
+ *         sendCode: ({ email, code, url }) => console.log(email, code, url)
  *       })
  *     )
  *   },
@@ -42,6 +42,7 @@ import { Storage } from "../storage/storage.js"
 import { Provider } from "./provider.js"
 import { generateUnbiasedDigits, timingSafeCompare } from "../util/random.js"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
+import type { Context } from "hono"
 
 /**
  * @internal
@@ -49,6 +50,18 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 export interface PasswordHasher<T> {
   hash(password: string): Promise<T>
   verify(password: string, compare: T): Promise<boolean>
+}
+
+/**
+ * Passed to `sendCode`/`sendResetCode`. There's no `user` object here (unlike some other auth
+ * libraries) - `PasswordProvider` has no adapter access, only `email` is known at this point.
+ * `url` links to the page where the code can be entered, so you can put a clickable link in
+ * the email alongside the code itself.
+ */
+export interface SendCodeInput {
+  email: string
+  code: string
+  url: string
 }
 
 export interface PasswordConfig {
@@ -123,19 +136,35 @@ export interface PasswordConfig {
    */
   verify?: boolean
   /**
-   * Callback to send the confirmation pin code to the user. Required unless `verify` is
-   * `false` - and even then, still required if you want the "forgot password" flow to work.
+   * Callback to send the confirmation pin code for registration. Required unless `verify` is
+   * `false`.
    *
    * @example
    * ```ts
    * {
-   *   sendCode: async (email, code) => {
+   *   sendCode: async ({ email, code, url }) => {
    *     // Send an email with the code
    *   }
    * }
    * ```
    */
-  sendCode?: (email: string, code: string) => Promise<void>
+  sendCode?: (input: SendCodeInput) => Promise<void>
+  /**
+   * Callback to send the confirmation pin code for the "forgot password" flow. Falls back to
+   * `sendCode` if not provided - use this when you want different copy for "verify your new
+   * account" vs. "reset your password." Required (via the fallback, at minimum) since the
+   * forgot-password flow always needs to prove ownership of the email, regardless of `verify`.
+   *
+   * @example
+   * ```ts
+   * {
+   *   sendResetCode: async ({ email, code, url }) => {
+   *     // Send a "reset your password" email, distinct from the registration one
+   *   }
+   * }
+   * ```
+   */
+  sendResetCode?: (input: SendCodeInput) => Promise<void>
   /**
    * Callback to validate the password on sign up and password reset.
    *
@@ -286,12 +315,20 @@ export function PasswordProvider(
   function generate() {
     return generateUnbiasedDigits(6)
   }
-  async function sendCode(email: string, code: string) {
+  async function sendCode(c: Context, email: string, code: string) {
     if (!config.sendCode)
       throw new Error(
         "PasswordProvider: `sendCode` is required for the forgot-password flow, even with `verify: false`",
       )
-    await config.sendCode(email, code)
+    await config.sendCode({ email, code, url: getRelativeUrl(c, "./register") })
+  }
+  async function sendResetCode(c: Context, email: string, code: string) {
+    const send = config.sendResetCode ?? config.sendCode
+    if (!send)
+      throw new Error(
+        "PasswordProvider: `sendResetCode` (or `sendCode` as a fallback) is required for the forgot-password flow",
+      )
+    await send({ email, code, url: getRelativeUrl(c, "./change") })
   }
   return {
     type: "password",
@@ -404,7 +441,7 @@ export function PasswordProvider(
             return ctx.success(c, { email })
           }
           const code = generate()
-          await sendCode(email, code)
+          await sendCode(c, email, code)
           return transition({
             type: "code",
             code,
@@ -415,7 +452,7 @@ export function PasswordProvider(
 
         if (action === "register" && provider.type === "code") {
           const code = generate()
-          await sendCode(provider.email, code)
+          await sendCode(c, provider.email, code)
           return transition({
             type: "code",
             code,
@@ -481,7 +518,7 @@ export function PasswordProvider(
               { type: "invalid_email" },
             )
           const code = generate()
-          await sendCode(email, code)
+          await sendResetCode(c, email, code)
 
           return transition({
             type: "code",
