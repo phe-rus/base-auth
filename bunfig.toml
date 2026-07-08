@@ -1,2 +1,4 @@
 [install]
 exact = true
+auto = "auto"
+linker = "isolated"

@@ -1,4 +1,33 @@
-/node_modules
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+
+.claude
+.agents
+
+# environment variables
+.env*
+.env.local
+.env.example
+.env.production
+
+# turbo
+.bun
+.turbo
+bun.lock
+
+# typescript
+*.tsbuildinfo
+**/src/routeTree.gen.ts
+**/src/routes.gen.ts
+.reference
 .sst
 .env
 dist
@@ -7,3 +36,5 @@ persist.json
 notes
 .nvim.lua
 .svelte-kit
+bun.lockb
+.bun
