@@ -152,18 +152,6 @@ export interface ClientInput {
 
 export interface AuthorizeOptions {
   /**
-   * Enable the PKCE flow. This is for SPA apps.
-   *
-   * ```ts
-   * {
-   *   pkce: true
-   * }
-   * ```
-   *
-   * @default false
-   */
-  pkce?: boolean
-  /**
    * The provider you want to use for the OAuth flow.
    *
    * ```ts
@@ -354,34 +342,27 @@ export interface Client {
    * const { url } = await client.authorize(<redirect_uri>, "code")
    * ```
    *
-   * This takes a redirect URI and the type of flow you want to use. The redirect URI is the
-   * location where the user will be redirected to after the flow is complete.
-   *
-   * Supports both the _code_ and _token_ flows. We recommend using the _code_ flow as it's more
-   * secure.
+   * This takes a redirect URI and the response type. Only the _code_ flow is supported - OAuth
+   * 2.1 removed the _token_ (implicit) flow.
    *
    * :::tip
    * This returns a URL to redirect the user to. This starts the OAuth flow.
    * :::
    *
    * This returns a URL to the auth server. You can redirect the user to the URL to start the
-   * OAuth flow.
+   * OAuth flow. PKCE is always used (OAuth 2.1 requires it for every client, not just SPAs) -
+   * the returned `challenge` includes the `verifier` you'll need later, in `client.exchange()`.
    *
-   * For SPA apps, we recommend using the PKCE flow.
+   * For SPA apps, store the challenge in session storage. For SSR apps, store the verifier in a
+   * short-lived cookie across the redirect.
    *
-   * ```ts {4}
-   * const { challenge, url } = await client.authorize(
-   *   <redirect_uri>,
-   *   "code",
-   *   { pkce: true }
-   * )
+   * ```ts
+   * const { challenge, url } = await client.authorize(<redirect_uri>, "code")
    * ```
-   *
-   * This returns a redirect URL and a challenge that you need to use later to verify the code.
    */
   authorize(
     redirectURI: string,
-    response: "code" | "token",
+    response: "code",
     opts?: AuthorizeOptions,
   ): Promise<AuthorizeResult>
   /**
@@ -397,15 +378,9 @@ export interface Client {
    * For SSR sites, the code is returned in the query parameter.
    * :::
    *
-   * So the code comes from the query parameter in the redirect URI. The redirect URI here is
-   * the one that you passed in to the `authorize` call when starting the flow.
-   *
-   * :::tip
-   * For SPA sites, the code is returned through the URL hash.
-   * :::
-   *
-   * If you used the PKCE flow for an SPA app, the code is returned as a part of the redirect URL
-   * hash.
+   * So the code comes from the query parameter in the redirect URI, for both SSR and SPA apps -
+   * the redirect URI here is the one that you passed in to the `authorize` call when starting
+   * the flow.
    *
    * ```ts {4}
    * const exchanged = await client.exchange(
@@ -579,7 +554,7 @@ export function createClient(input: ClientInput): Client {
   const result = {
     async authorize(
       redirectURI: string,
-      response: "code" | "token",
+      response: "code",
       opts?: AuthorizeOptions,
     ) {
       const result = new URL(issuer + "/authorize")
@@ -591,35 +566,15 @@ export function createClient(input: ClientInput): Client {
       result.searchParams.set("response_type", response)
       result.searchParams.set("state", challenge.state)
       if (opts?.provider) result.searchParams.set("provider", opts.provider)
-      if (opts?.pkce && response === "code") {
-        const pkce = await generatePKCE()
-        result.searchParams.set("code_challenge_method", "S256")
-        result.searchParams.set("code_challenge", pkce.challenge)
-        challenge.verifier = pkce.verifier
-      }
+      // OAuth 2.1 mandates PKCE for every client - always generated, no opt-out.
+      const pkce = await generatePKCE()
+      result.searchParams.set("code_challenge_method", "S256")
+      result.searchParams.set("code_challenge", pkce.challenge)
+      challenge.verifier = pkce.verifier
       return {
         challenge,
         url: result.toString(),
       }
-    },
-    /**
-     * @deprecated use `authorize` instead, it will do pkce by default unless disabled with `opts.pkce = false`
-     */
-    async pkce(
-      redirectURI: string,
-      opts?: {
-        provider?: string
-      },
-    ) {
-      const result = new URL(issuer + "/authorize")
-      if (opts?.provider) result.searchParams.set("provider", opts.provider)
-      result.searchParams.set("client_id", input.clientID)
-      result.searchParams.set("redirect_uri", redirectURI)
-      result.searchParams.set("response_type", "code")
-      const pkce = await generatePKCE()
-      result.searchParams.set("code_challenge_method", "S256")
-      result.searchParams.set("code_challenge", pkce.challenge)
-      return [pkce.verifier, result.toString()]
     },
     async exchange(
       code: string,

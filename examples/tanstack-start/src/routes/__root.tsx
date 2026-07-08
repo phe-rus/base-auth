@@ -35,7 +35,7 @@ function RootDocument({ children }: PropsWithChildren) {
         <HeadContent />
       </head>
       <body className="min-h-screen bg-neutral-950 text-neutral-100">
-        <nav className="flex gap-4 border-b border-neutral-800 p-4">
+        <nav className="sticky top-0 z-10 flex gap-4 border-b border-neutral-800 bg-neutral-950/80 p-4 backdrop-blur">
           <Link to="/" className="font-semibold">
             Base Auth
           </Link>

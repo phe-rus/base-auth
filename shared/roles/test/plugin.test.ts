@@ -33,14 +33,28 @@ async function makeUser(email: string) {
 }
 
 describe("RolesPlugin", () => {
-  test("returns the default role before any assignment", async () => {
-    const user = await makeUser("alice@example.com")
-    const res = await app.request(`/${user.id}`)
-    expect(await res.json()).toEqual({ userId: user.id, role: "user" })
+  test("the first user ever created gets admin, persisted on first lookup", async () => {
+    const first = await makeUser("alice@example.com")
+    const res = await app.request(`/${first.id}`)
+    expect(await res.json()).toEqual({ userId: first.id, role: "admin" })
+    expect(
+      await adapter.count({
+        model: "role",
+        where: [{ field: "userId", value: first.id }],
+      }),
+    ).toBe(1)
+  })
+
+  test("returns the default role for anyone after the first user", async () => {
+    await makeUser("alice@example.com") // first user - becomes admin
+    const second = await makeUser("bob@example.com")
+    const res = await app.request(`/${second.id}`)
+    expect(await res.json()).toEqual({ userId: second.id, role: "user" })
   })
 
   test("assigns a role and reflects it on a repeat get", async () => {
-    const user = await makeUser("alice@example.com")
+    await makeUser("alice@example.com") // first user - not the subject here
+    const user = await makeUser("bob@example.com")
     await app.request("/assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,7 +65,8 @@ describe("RolesPlugin", () => {
   })
 
   test("assigning again updates the role rather than duplicating", async () => {
-    const user = await makeUser("alice@example.com")
+    await makeUser("alice@example.com") // first user - not the subject here
+    const user = await makeUser("bob@example.com")
     await app.request("/assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -74,7 +89,8 @@ describe("RolesPlugin", () => {
   })
 
   test("getUserRole() helper matches the route, no HTTP needed", async () => {
-    const user = await makeUser("alice@example.com")
+    await makeUser("alice@example.com") // first user - not the subject here
+    const user = await makeUser("bob@example.com")
     expect(await getUserRole(adapter, user.id)).toBe("user")
 
     await app.request("/assign", {
@@ -85,9 +101,10 @@ describe("RolesPlugin", () => {
     expect(await getUserRole(adapter, user.id)).toBe("admin")
   })
 
-  test("custom defaultRole option", async () => {
+  test("custom defaultRole option applies after the first user", async () => {
     const customApp = new Hono()
     RolesPlugin({ defaultRole: "guest" }).init(customApp, { adapter })
+    await makeUser("alice@example.com") // first user - always admin regardless of defaultRole
     const user = await makeUser("bob@example.com")
     const res = await customApp.request(`/${user.id}`)
     expect(await res.json()).toEqual({ userId: user.id, role: "guest" })

@@ -67,6 +67,9 @@ export const coreModels: Record<string, ModelDefinition> = {
   user: {
     fields: {
       id: { type: "string", required: true, unique: true },
+      email: { type: "string" },
+      preferredName: { type: "string" },
+      avatar: { type: "string" },
       createdAt: { type: "date", required: true },
       updatedAt: { type: "date", required: true },
     },

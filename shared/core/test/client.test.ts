@@ -78,9 +78,10 @@ describe("verify", () => {
       clientID: "123",
       fetch: (a, b) => Promise.resolve(auth.request(a, b)),
     })
-    const [verifier, authorization] = await client.pkce(
-      "https://client.example.com/callback",
-    )
+    const {
+      challenge: { verifier },
+      url: authorization,
+    } = await client.authorize("https://client.example.com/callback", "code")
     let response = await auth.request(authorization)
     response = await auth.request(response.headers.get("location")!, {
       headers: {

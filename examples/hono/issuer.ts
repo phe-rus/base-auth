@@ -21,6 +21,7 @@ interface Env {
 const subjects = createSubjects({
   user: object({
     id: string(),
+    email: string(),
   }),
 })
 
@@ -42,7 +43,7 @@ export default {
       },
       success: async (ctx, value) => {
         if (value.provider === "password") {
-          return ctx.subject("user", { id: value.email })
+          return ctx.subject("user", { id: value.email, email: value.email })
         }
         throw new Error("Invalid provider")
       },

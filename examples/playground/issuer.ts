@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
-import { object, string } from "valibot"
+import { object, optional, string } from "valibot"
 import { issuer } from "@base-auth/core"
 import { createSubjects } from "@base-auth/core/subject"
 import { findOrCreateUserByAccount } from "@base-auth/core/adapter"
@@ -29,6 +29,7 @@ const adapter = drizzleAdapter(db, { provider: "sqlite", schema })
 const subjects = createSubjects({
   user: object({
     id: string(),
+    email: optional(string()),
     role: string(),
   }),
 })
@@ -49,12 +50,13 @@ const app = issuer({
   },
   success: async (ctx, value) => {
     if (value.provider === "password") {
-      const user = await findOrCreateUserByAccount(adapter, {
-        providerId: "password",
-        accountId: value.email,
-      })
+      const user = await findOrCreateUserByAccount(
+        adapter,
+        { providerId: "password", accountId: value.email },
+        { email: value.email },
+      )
       const role = await getUserRole(adapter, user.id)
-      return ctx.subject("user", { id: user.id, role })
+      return ctx.subject("user", { id: user.id, email: user.email, role })
     }
     throw new Error("Invalid provider")
   },

@@ -114,7 +114,17 @@ export interface PasswordConfig {
     error?: PasswordChangeError,
   ) => Promise<Response>
   /**
-   * Callback to send the confirmation pin code to the user.
+   * Whether registration requires verifying a pin code sent to the user's email before the
+   * account is created. When `false`, `sendCode` is optional and registration completes
+   * immediately - `sendCode` is still required for the "forgot password" flow regardless,
+   * since that always needs to prove ownership of the email.
+   *
+   * @default true
+   */
+  verify?: boolean
+  /**
+   * Callback to send the confirmation pin code to the user. Required unless `verify` is
+   * `false` - and even then, still required if you want the "forgot password" flow to work.
    *
    * @example
    * ```ts
@@ -125,7 +135,7 @@ export interface PasswordConfig {
    * }
    * ```
    */
-  sendCode: (email: string, code: string) => Promise<void>
+  sendCode?: (email: string, code: string) => Promise<void>
   /**
    * Callback to validate the password on sign up and password reset.
    *
@@ -268,8 +278,20 @@ export function PasswordProvider(
   config: PasswordConfig,
 ): Provider<{ email: string }> {
   const hasher = config.hasher ?? ScryptHasher()
+  const verify = config.verify ?? true
+  if (verify && !config.sendCode)
+    throw new Error(
+      "PasswordProvider: `sendCode` is required unless `verify` is set to `false`",
+    )
   function generate() {
     return generateUnbiasedDigits(6)
+  }
+  async function sendCode(email: string, code: string) {
+    if (!config.sendCode)
+      throw new Error(
+        "PasswordProvider: `sendCode` is required for the forgot-password flow, even with `verify: false`",
+      )
+    await config.sendCode(email, code)
   }
   return {
     type: "password",
@@ -376,19 +398,24 @@ export function PasswordProvider(
             "password",
           ])
           if (existing) return transition(provider, { type: "email_taken" })
+          const hashed = await hasher.hash(password)
+          if (!verify) {
+            await Storage.set(ctx.storage, ["email", email, "password"], hashed)
+            return ctx.success(c, { email })
+          }
           const code = generate()
-          await config.sendCode(email, code)
+          await sendCode(email, code)
           return transition({
             type: "code",
             code,
-            password: await hasher.hash(password),
+            password: hashed,
             email,
           })
         }
 
         if (action === "register" && provider.type === "code") {
           const code = generate()
-          await config.sendCode(provider.email, code)
+          await sendCode(provider.email, code)
           return transition({
             type: "code",
             code,
@@ -454,7 +481,7 @@ export function PasswordProvider(
               { type: "invalid_email" },
             )
           const code = generate()
-          await config.sendCode(email, code)
+          await sendCode(email, code)
 
           return transition({
             type: "code",

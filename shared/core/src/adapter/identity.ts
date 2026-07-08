@@ -5,8 +5,17 @@ export interface FindOrCreateUserByAccountInput {
   accountId: string
 }
 
+export interface UserProfile {
+  email?: string
+  preferredName?: string
+  avatar?: string
+}
+
 export interface User {
   id: string
+  email?: string
+  preferredName?: string
+  avatar?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -24,10 +33,15 @@ interface Account {
  * provider's `success` callback needs this same lookup-or-create, so it
  * lives here once, against the generic `Adapter` contract - it works with
  * any adapter implementation, not just Drizzle.
+ *
+ * `profile` is only applied on creation - a repeat login never overwrites
+ * an existing user's profile fields (that's what a dedicated "update
+ * profile" call is for, not this one).
  */
 export async function findOrCreateUserByAccount(
   adapter: Adapter,
   input: FindOrCreateUserByAccountInput,
+  profile?: UserProfile,
 ): Promise<User> {
   const existing = await adapter.findOne<Account>({
     model: "account",
@@ -48,7 +62,14 @@ export async function findOrCreateUserByAccount(
   const now = new Date()
   const newUser = await adapter.create<User>({
     model: "user",
-    data: { id: crypto.randomUUID(), createdAt: now, updatedAt: now },
+    data: {
+      id: crypto.randomUUID(),
+      email: profile?.email,
+      preferredName: profile?.preferredName,
+      avatar: profile?.avatar,
+      createdAt: now,
+      updatedAt: now,
+    },
   })
   await adapter.create<Account>({
     model: "account",

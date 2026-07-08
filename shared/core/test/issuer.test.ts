@@ -81,9 +81,6 @@ describe("code flow", () => {
     const { challenge, url } = await client.authorize(
       "https://client.example.com/callback",
       "code",
-      {
-        pkce: true,
-      },
     )
     let response = await auth.request(url)
     expect(response.status).toBe(302)
@@ -116,6 +113,64 @@ describe("code flow", () => {
         userID: "123",
       },
     })
+  })
+})
+
+describe("OAuth 2.1", () => {
+  test("/authorize rejects a missing code_challenge", async () => {
+    const response = await auth.request(
+      "/authorize?client_id=123&redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback&response_type=code",
+    )
+    expect(response.status).toBe(302)
+    const location = new URL(response.headers.get("location")!)
+    expect(location.searchParams.get("error")).toBe("invalid_request")
+    expect(location.searchParams.get("error_description")).toContain(
+      "code_challenge",
+    )
+  })
+
+  test("/authorize rejects response_type=token (implicit grant removed)", async () => {
+    const response = await auth.request(
+      "/authorize?client_id=123&redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback&response_type=token",
+    )
+    expect(response.status).toBe(302)
+    const location = new URL(response.headers.get("location")!)
+    expect(location.searchParams.get("error")).toBe(
+      "unsupported_response_type",
+    )
+  })
+
+  test("/token rejects a code exchange missing code_verifier", async () => {
+    const client = createClient({
+      issuer: "https://auth.example.com",
+      clientID: "123",
+      fetch: (a, b) => Promise.resolve(auth.request(a, b)),
+    })
+    const { url } = await client.authorize(
+      "https://client.example.com/callback",
+      "code",
+    )
+    let response = await auth.request(url)
+    response = await auth.request(response.headers.get("location")!, {
+      headers: { cookie: response.headers.get("set-cookie")! },
+    })
+    const location = new URL(response.headers.get("location")!)
+    const code = location.searchParams.get("code")!
+
+    const exchanged = await auth.request("/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: "https://client.example.com/callback",
+        client_id: "123",
+        // no code_verifier
+      }),
+    })
+    expect(exchanged.status).toBe(400)
+    const body = await exchanged.json()
+    expect(body.error_description).toContain("code_verifier")
   })
 })
 
@@ -165,9 +220,6 @@ describe("refresh token", () => {
     const { challenge, url } = await client.authorize(
       "https://client.example.com/callback",
       "code",
-      {
-        pkce: true,
-      },
     )
     let response = await issuer.request(url)
     response = await issuer.request(response.headers.get("location")!, {
@@ -349,7 +401,6 @@ describe("user info", () => {
     const { challenge, url } = await client.authorize(
       "https://client.example.com/callback",
       "code",
-      { pkce: true },
     )
     let response = await issuer.request(url)
     response = await issuer.request(response.headers.get("location")!, {

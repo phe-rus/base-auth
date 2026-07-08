@@ -24,6 +24,7 @@ export class OauthError extends Error {
       | "invalid_grant"
       | "unauthorized_client"
       | "access_denied"
+      | "unsupported_response_type"
       | "unsupported_grant_type"
       | "server_error"
       | "temporarily_unavailable",

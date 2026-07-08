@@ -40,7 +40,7 @@ function RootDocument({ children }: PropsWithChildren) {
         <HeadContent />
       </head>
       <body className="min-h-screen bg-neutral-950 text-neutral-100">
-        <header className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-800 bg-neutral-950/80 px-6 py-4 backdrop-blur">
           <Link to="/" className="font-semibold tracking-tight">
             Base Auth <span className="text-neutral-500">by Pherus</span>
           </Link>

@@ -558,55 +558,31 @@ export function issuer<
             await successOpts?.invalidate?.(
               await resolveSubject(type, properties),
             )
-            if (authorization.response_type === "token") {
-              const location = new URL(authorization.redirect_uri)
-              const tokens = await generateTokens(ctx, {
-                subject,
-                type: type as string,
+            // "code" is the only supported response_type - /authorize already
+            // rejects anything else before authorization state is even set.
+            const code = crypto.randomUUID()
+            await Storage.set(
+              storage,
+              ["oauth:code", code],
+              {
+                type,
                 properties,
+                subject,
+                redirectURI: authorization.redirect_uri,
                 clientID: authorization.client_id,
+                pkce: authorization.pkce,
                 ttl: {
                   access: subjectOpts?.ttl?.access ?? ttlAccess,
                   refresh: subjectOpts?.ttl?.refresh ?? ttlRefresh,
                 },
-              })
-              location.hash = new URLSearchParams({
-                access_token: tokens.access,
-                refresh_token: tokens.refresh,
-                state: authorization.state || "",
-              }).toString()
-              await auth.unset(ctx, "authorization")
-              return ctx.redirect(location.toString(), 302)
-            }
-            if (authorization.response_type === "code") {
-              const code = crypto.randomUUID()
-              await Storage.set(
-                storage,
-                ["oauth:code", code],
-                {
-                  type,
-                  properties,
-                  subject,
-                  redirectURI: authorization.redirect_uri,
-                  clientID: authorization.client_id,
-                  pkce: authorization.pkce,
-                  ttl: {
-                    access: subjectOpts?.ttl?.access ?? ttlAccess,
-                    refresh: subjectOpts?.ttl?.refresh ?? ttlRefresh,
-                  },
-                },
-                60,
-              )
-              const location = new URL(authorization.redirect_uri)
-              location.searchParams.set("code", code)
-              location.searchParams.set("state", authorization.state || "")
-              await auth.unset(ctx, "authorization")
-              return ctx.redirect(location.toString(), 302)
-            }
-            throw new OauthError(
-              "invalid_request",
-              `Unsupported response_type: ${authorization.response_type}`,
+              },
+              60,
             )
+            const location = new URL(authorization.redirect_uri)
+            location.searchParams.set("code", code)
+            location.searchParams.set("state", authorization.state || "")
+            await auth.unset(ctx, "authorization")
+            return ctx.redirect(location.toString(), 302)
           },
         },
         {
@@ -831,7 +807,8 @@ export function issuer<
         authorization_endpoint: `${iss}/authorize`,
         token_endpoint: `${iss}/token`,
         jwks_uri: `${iss}/.well-known/jwks.json`,
-        response_types_supported: ["code", "token"],
+        response_types_supported: ["code"],
+        code_challenge_methods_supported: ["S256"],
       })
     },
   )
@@ -900,32 +877,41 @@ export function issuer<
           )
         }
 
-        if (payload.pkce) {
-          const codeVerifier = form.get("code_verifier")?.toString()
-          if (!codeVerifier)
-            return c.json(
-              {
-                error: "invalid_grant",
-                error_description: "Missing code_verifier",
-              },
-              400,
-            )
+        // OAuth 2.1 mandates PKCE - unconditional now, not just when the
+        // stored authorization happens to have a challenge.
+        if (!payload.pkce) {
+          return c.json(
+            {
+              error: "invalid_grant",
+              error_description: "PKCE is required",
+            },
+            400,
+          )
+        }
+        const codeVerifier = form.get("code_verifier")?.toString()
+        if (!codeVerifier)
+          return c.json(
+            {
+              error: "invalid_grant",
+              error_description: "Missing code_verifier",
+            },
+            400,
+          )
 
-          if (
-            !(await validatePKCE(
-              codeVerifier,
-              payload.pkce.challenge,
-              payload.pkce.method,
-            ))
-          ) {
-            return c.json(
-              {
-                error: "invalid_grant",
-                error_description: "Code verifier does not match",
-              },
-              400,
-            )
-          }
+        if (
+          !(await validatePKCE(
+            codeVerifier,
+            payload.pkce.challenge,
+            payload.pkce.method,
+          ))
+        ) {
+          return c.json(
+            {
+              error: "invalid_grant",
+              error_description: "Code verifier does not match",
+            },
+            400,
+          )
         }
         const tokens = await generateTokens(c, payload)
         await Storage.remove(storage, key)
@@ -1092,8 +1078,27 @@ export function issuer<
       throw new MissingParameterError("response_type")
     }
 
+    // OAuth 2.1 removes the implicit grant - "code" is the only supported flow.
+    if (response_type !== "code") {
+      throw new OauthError(
+        "unsupported_response_type",
+        `Unsupported response_type: ${response_type}. Only "code" is supported.`,
+      )
+    }
+
     if (!client_id) {
       throw new MissingParameterError("client_id")
+    }
+
+    // OAuth 2.1 mandates PKCE for every client, not just public/SPA clients.
+    if (!code_challenge || !code_challenge_method) {
+      throw new MissingParameterError("code_challenge")
+    }
+    if (code_challenge_method !== "S256") {
+      throw new OauthError(
+        "invalid_request",
+        `Unsupported code_challenge_method: ${code_challenge_method}. Only "S256" is supported.`,
+      )
     }
 
     if (input.start) {

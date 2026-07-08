@@ -11,4 +11,5 @@ export {
   findOrCreateUserByAccount,
   type FindOrCreateUserByAccountInput,
   type User,
+  type UserProfile,
 } from "./identity.js"

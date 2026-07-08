@@ -1,10 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
+import { setCookie } from "@tanstack/react-start/server"
 import { client, issuerUrl } from "../lib/auth"
 import { redirectUri } from "../lib/config"
 
+// OAuth 2.1 mandates PKCE for every client - client.authorize() always
+// generates a verifier now. For an SSR app it can't live in localStorage
+// (no browser yet at this point), so it rides along in a short-lived
+// httpOnly cookie across the redirect, read back in routes/callback.tsx.
 const getSignInUrl = createServerFn().handler(async () => {
-  const { url } = await client.authorize(redirectUri, "code")
+  const { url, challenge } = await client.authorize(redirectUri, "code")
+  setCookie("pkce_verifier", challenge.verifier!, {
+    httpOnly: true,
+    path: "/",
+    maxAge: 60 * 10,
+  })
   return { url }
 })
 
