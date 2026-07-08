@@ -1,7 +1,7 @@
 {
-  "name": "@openauthjs/example-issuer-bun",
+  "name": "@base-auth/example-issuer-bun",
   "version": "0.0.0",
   "dependencies": {
-    "@openauthjs/openauth": "workspace:*"
+    "@base-auth/core": "workspace:*"
   }
 }

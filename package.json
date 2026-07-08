@@ -1,18 +1,24 @@
 {
-  "name": "openauthjs",
+  "name": "base-auth",
   "module": "index.ts",
   "type": "module",
+  "packageManager": "bun@1.3.14",
   "workspaces": [
-    "packages/openauth",
+    "shared/*",
     "examples/issuer/*",
-    "examples/client/*"
+    "examples/client/*",
+    "examples/playground"
   ],
   "scripts": {
-    "release": "bun run --filter=\"@openauthjs/openauth\" build && changeset publish"
+    "dev": "turbo run dev --filter=@base-auth/example-playground",
+    "build": "turbo run build --filter=@base-auth/core",
+    "test": "turbo run test --filter=@base-auth/core",
+    "release": "bun run --filter=\"@base-auth/core\" build && changeset publish"
   },
   "devDependencies": {
     "@tsconfig/node22": "22.0.5",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "turbo": "2.10.4"
   },
   "dependencies": {
     "@changesets/cli": "2.31.0",

@@ -1,4 +1,4 @@
-import { createClient } from "@openauthjs/openauth/client"
+import { createClient } from "@base-auth/core/client"
 import { subjects } from "../../subjects"
 
 const headers = {

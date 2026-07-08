@@ -1,5 +1,5 @@
 {
-  "name": "@openauthjs/example-jwt-api",
+  "name": "@base-auth/example-jwt-api",
   "version": "1.0.1",
   "description": "",
   "main": "index.js",
@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openauthjs/openauth": "workspace:*"
+    "@base-auth/core": "workspace:*"
   }
 }

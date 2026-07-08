@@ -1,8 +1,8 @@
-import { issuer } from "@openauthjs/openauth"
+import { issuer } from "@base-auth/core"
 import { handle } from "hono/aws-lambda"
 import { subjects } from "../../subjects.js"
-import { PasswordUI } from "@openauthjs/openauth/ui/password"
-import { PasswordProvider } from "@openauthjs/openauth/provider/password"
+import { PasswordUI } from "@base-auth/core/ui/password"
+import { PasswordProvider } from "@base-auth/core/provider/password"
 
 async function getUser(email: string) {
   // Get user from database

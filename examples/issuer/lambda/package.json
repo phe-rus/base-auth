@@ -1,8 +1,8 @@
 {
-  "name": "@openauthjs/example-issuer-aws",
+  "name": "@base-auth/example-issuer-aws",
   "version": "0.0.0",
   "dependencies": {
-    "@openauthjs/openauth": "workspace:*",
+    "@base-auth/core": "workspace:*",
     "sst": "3.5.1"
   }
 }

@@ -1,6 +1,6 @@
-import { issuer } from "@openauthjs/openauth"
-import { MemoryStorage } from "@openauthjs/openauth/storage/memory"
-import { CodeProvider } from "@openauthjs/openauth/provider/code"
+import { issuer } from "@base-auth/core"
+import { MemoryStorage } from "@base-auth/core/storage/memory"
+import { CodeProvider } from "@base-auth/core/provider/code"
 import { subjects } from "../../../subjects.js"
 
 async function getUser(email: string) {

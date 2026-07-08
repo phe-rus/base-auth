@@ -1,5 +1,5 @@
 {
-  "name": "@openauthjs/example-client-astro",
+  "name": "@base-auth/example-client-astro",
   "type": "module",
   "version": "0.0.0",
   "scripts": {
@@ -9,7 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@openauthjs/openauth": "workspace:*",
+    "@base-auth/core": "workspace:*",
     "astro": "5.0.2"
   }
 }

@@ -1,0 +1,79 @@
+{
+  "name": "@base-auth/core",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run script/build.ts",
+    "test": "bun test"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260708.1",
+    "@tsconfig/node22": "22.0.5",
+    "@types/node": "26.1.1",
+    "arctic": "3.7.0",
+    "hono": "4.12.28",
+    "typescript": "6.0.3",
+    "valibot": "1.4.2"
+  },
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./dist/esm/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./*": {
+      "bun": "./src/*.ts",
+      "import": "./dist/esm/*.js",
+      "types": "./dist/types/*.d.ts"
+    },
+    "./ui": {
+      "bun": "./src/ui/base.tsx",
+      "import": "./dist/esm/ui/index.js",
+      "types": "./dist/types/ui/index.d.ts"
+    },
+    "./ui/base": {
+      "bun": "./src/ui/base.tsx",
+      "import": "./dist/esm/ui/base.js",
+      "types": "./dist/types/ui/base.d.ts"
+    },
+    "./ui/code": {
+      "bun": "./src/ui/code.tsx",
+      "import": "./dist/esm/ui/code.js",
+      "types": "./dist/types/ui/code.d.ts"
+    },
+    "./ui/form": {
+      "bun": "./src/ui/form.tsx",
+      "import": "./dist/esm/ui/form.js",
+      "types": "./dist/types/ui/form.d.ts"
+    },
+    "./ui/icon": {
+      "bun": "./src/ui/icon.tsx",
+      "import": "./dist/esm/ui/icon.js",
+      "types": "./dist/types/ui/icon.d.ts"
+    },
+    "./ui/password": {
+      "bun": "./src/ui/password.tsx",
+      "import": "./dist/esm/ui/password.js",
+      "types": "./dist/types/ui/password.d.ts"
+    },
+    "./ui/select": {
+      "bun": "./src/ui/select.tsx",
+      "import": "./dist/esm/ui/select.js",
+      "types": "./dist/types/ui/select.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "arctic": "^2",
+    "hono": "^4"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "1.1.0",
+    "aws4fetch": "1.0.20",
+    "jose": "6.2.3"
+  },
+  "files": [
+    "src",
+    "dist"
+  ]
+}

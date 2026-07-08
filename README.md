@@ -9,11 +9,13 @@
 </p>
 <p align="center">
   <a href="https://sst.dev/discord"><img alt="Discord" src="https://img.shields.io/discord/983865673656705025?style=flat-square&label=Discord" /></a>
-  <a href="https://www.npmjs.com/package/@openauthjs/openauth"><img alt="npm" src="https://img.shields.io/npm/v/%40openauthjs%2Fcore?style=flat-square" /></a>
+  <a href="https://www.npmjs.com/package/@base-auth/core"><img alt="npm" src="https://img.shields.io/npm/v/%40openauthjs%2Fcore?style=flat-square" /></a>
   <a href="https://github.com/toolbeam/openauth/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/toolbeam/openauth/release.yml?style=flat-square&branch=master" /></a>
 </p>
 
 ---
+
+> **Base Auth by Pherus** is a fork of [SST's OpenAuth](https://github.com/toolbeam/openauth) (MIT licensed), being rebuilt into a self-hosted-first auth platform with opt-in plugins (roles, passkeys, 2FA, username) and a management dashboard. The rest of this README still describes the upstream OpenAuth project and will be rewritten as the fork progresses.
 
 [OpenAuth](https://openauth.js.org) is a standards-based auth provider for web apps, mobile apps, single pages apps, APIs, or 3rd party clients. It is currently in beta.
 
@@ -56,10 +58,10 @@ We'll show how to deploy the auth server and then a sample app that uses it.
 
 ### Auth server
 
-Start by importing the `issuer` function from the `@openauthjs/openauth` package.
+Start by importing the `issuer` function from the `@base-auth/core` package.
 
 ```ts
-import { issuer } from "@openauthjs/openauth"
+import { issuer } from "@base-auth/core"
 ```
 
 OpenAuth is built on top of [Hono](https://github.com/honojs/hono) which is a minimal web framework that can run anywhere. The `issuer` function creates a Hono app with all of the auth server implemented that you can then deploy to AWS Lambda, Cloudflare Workers, or in a container running under Node.js or Bun.
@@ -78,7 +80,7 @@ const app = issuer({
 First we need to define some providers that are enabled - these are either third party identity providers like Google, GitHub, etc or built in flows like email/password or pin code. You can also implement your own. Let's try the GitHub provider.
 
 ```ts
-import { GithubProvider } from "@openauthjs/openauth/provider/github"
+import { GithubProvider } from "@base-auth/core/provider/github"
 
 const app = issuer({
   providers: {
@@ -95,7 +97,7 @@ const app = issuer({
 Providers take some configuration - since this is a third party identity provider there is no UI to worry about and all it needs is a client ID, secret and some scopes. Let's add the password provider which is a bit more complicated.
 
 ```ts
-import { PasswordProvider } from "@openauthjs/openauth/provider/password"
+import { PasswordProvider } from "@base-auth/core/provider/password"
 
 const app = issuer({
   providers: {
@@ -109,8 +111,8 @@ const app = issuer({
 The password provider is quite complicated as username/password involve a lot of flows so there are a lot of callbacks to implement. However you can opt into the default UI which has all of this already implemented for you. The only thing you have to specify is how to send a code for forgot password/email verification. In this case we'll log the code but you would send this over email.
 
 ```ts
-import { PasswordProvider } from "@openauthjs/openauth/provider/password"
-import { PasswordUI } from "@openauthjs/openauth/ui/password"
+import { PasswordProvider } from "@base-auth/core/provider/password"
+import { PasswordUI } from "@base-auth/core/ui/password"
 
 const app = issuer({
   providers: {
@@ -184,7 +186,7 @@ Note all of this is typesafe - based on the configured providers you will receiv
 Next we have the `storage` field which defines where things like refresh tokens and password hashes are stored. If on AWS we recommend DynamoDB, if on Cloudflare we recommend Cloudflare KV. We also have a MemoryStore used for testing.
 
 ```ts
-import { MemoryStorage } from "@openauthjs/openauth/storage/memory"
+import { MemoryStorage } from "@base-auth/core/storage/memory"
 
 const app = issuer({
   providers: { ... },
@@ -219,7 +221,7 @@ You now have a centralized auth server. Test it out by visiting `/.well-known/oa
 Since this is a standard OAuth server you can use any libraries for OAuth and it will work. OpenAuth does provide some light tooling for this although even a manual flow is pretty simple. You can create a client like this:
 
 ```ts
-import { createClient } from "@openauthjs/openauth/client"
+import { createClient } from "@base-auth/core/client"
 
 const client = createClient({
   clientID: "my-client",

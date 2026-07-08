@@ -1,5 +1,5 @@
 import { Resource } from "sst"
-import { createClient } from "@openauthjs/openauth/client"
+import { createClient } from "@base-auth/core/client"
 import { cookies as getCookies } from "next/headers"
 
 export const client = createClient({

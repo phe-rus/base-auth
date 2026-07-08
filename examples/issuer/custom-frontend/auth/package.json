@@ -1,7 +1,7 @@
 {
-  "name": "@openauthjs/example-custom-frontend-issuer",
+  "name": "@base-auth/example-custom-frontend-issuer",
   "version": "0.0.0",
   "dependencies": {
-    "@openauthjs/openauth": "workspace:*"
+    "@base-auth/core": "workspace:*"
   }
 }
