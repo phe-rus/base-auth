@@ -6,6 +6,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "type-gen": "wrangler types --env-interface Env",
+    "schema:gen": "base-auth-drizzle generate --config ./schema.config.ts --out ./schema.ts",
     "db:gen": "drizzle-kit generate --config=drizzle.config.ts",
     "db:local": "wrangler d1 migrations apply base-auth-example --local",
     "db:remote": "wrangler d1 migrations apply base-auth-example --remote",

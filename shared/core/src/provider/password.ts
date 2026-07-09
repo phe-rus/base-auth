@@ -128,11 +128,12 @@ export interface PasswordConfig {
   ) => Promise<Response>
   /**
    * Whether registration requires verifying a pin code sent to the user's email before the
-   * account is created. When `false`, `sendCode` is optional and registration completes
-   * immediately - `sendCode` is still required for the "forgot password" flow regardless,
-   * since that always needs to prove ownership of the email.
+   * account is created. Opt-in - off unless you turn it on. When `false` (the default),
+   * `sendCode` is optional and registration completes immediately - `sendCode` is still
+   * required for the "forgot password" flow regardless, since that always needs to prove
+   * ownership of the email.
    *
-   * @default true
+   * @default false
    */
   verify?: boolean
   /**
@@ -307,7 +308,7 @@ export function PasswordProvider(
   config: PasswordConfig,
 ): Provider<{ email: string }> {
   const hasher = config.hasher ?? ScryptHasher()
-  const verify = config.verify ?? true
+  const verify = config.verify ?? false
   if (verify && !config.sendCode)
     throw new Error(
       "PasswordProvider: `sendCode` is required unless `verify` is set to `false`",

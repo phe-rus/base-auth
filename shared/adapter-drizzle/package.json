@@ -5,6 +5,9 @@
   "scripts": {
     "test": "bun test"
   },
+  "bin": {
+    "base-auth-drizzle": "./src/cli.ts"
+  },
   "exports": {
     ".": {
       "bun": "./src/index.ts",

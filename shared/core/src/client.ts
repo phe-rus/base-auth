@@ -148,6 +148,13 @@ export interface ClientInput {
    * want the client to use it too.
    */
   fetch?: FetchLike
+  /**
+   * Optionally, the subjects schema you defined when creating the issuer. Configuring this
+   * once here lets you call `client.getSession(token)` without repeating the schema on every
+   * call - equivalent to `client.verify(subjects, token)`. Without it, use `client.verify()`
+   * directly.
+   */
+  subjects?: SubjectSchema
 }
 
 export interface AuthorizeOptions {
@@ -515,6 +522,20 @@ export interface Client {
     token: string,
     options?: VerifyOptions,
   ): Promise<VerifyResult<T> | VerifyError>
+  /**
+   * Sugar for `client.verify(subjects, token)` using the `subjects` schema configured in
+   * `createClient({ subjects })` - throws if that wasn't configured. Same return shape,
+   * same optional auto-refresh via `options.refresh`.
+   *
+   * ```ts
+   * const client = createClient({ clientID, issuer, subjects })
+   * const session = await client.getSession(token)
+   * ```
+   */
+  getSession(
+    token: string,
+    options?: VerifyOptions,
+  ): Promise<VerifyResult<SubjectSchema> | VerifyError>
 }
 
 /**
@@ -701,6 +722,13 @@ export function createClient(input: ClientInput): Client {
           err: new InvalidAccessTokenError(),
         }
       }
+    },
+    async getSession(token: string, options?: VerifyOptions) {
+      if (!input.subjects)
+        throw new Error(
+          "createClient: `subjects` must be configured (createClient({ subjects })) to use getSession() - or call client.verify(subjects, token) directly",
+        )
+      return result.verify(input.subjects, token, options)
     },
   }
   return result

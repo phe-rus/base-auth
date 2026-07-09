@@ -155,3 +155,54 @@ describe("verify", () => {
     })
   })
 })
+
+describe("getSession", () => {
+  let tokens: { access: string; refresh: string }
+  let client: ReturnType<typeof createClient>
+
+  beforeEach(async () => {
+    client = createClient({
+      issuer: "https://auth2.example.com",
+      clientID: "123",
+      subjects,
+      fetch: (a, b) => Promise.resolve(auth.request(a, b)),
+    })
+    const {
+      challenge: { verifier },
+      url: authorization,
+    } = await client.authorize("https://client.example.com/callback", "code")
+    let response = await auth.request(authorization)
+    response = await auth.request(response.headers.get("location")!, {
+      headers: { cookie: response.headers.get("set-cookie")! },
+    })
+    const location = new URL(response.headers.get("location")!)
+    const code = location.searchParams.get("code")
+    const exchanged = await client.exchange(
+      code!,
+      "https://client.example.com/callback",
+      verifier,
+    )
+    if (exchanged.err) throw exchanged.err
+    tokens = exchanged.tokens
+  })
+
+  test("is sugar for verify() using the configured subjects", async () => {
+    const session = await client.getSession(tokens.access)
+    expect(session).toStrictEqual({
+      aud: "123",
+      subject: {
+        type: "user",
+        properties: { userID: "123" },
+      },
+    })
+  })
+
+  test("throws if `subjects` wasn't configured on createClient", async () => {
+    const bareClient = createClient({
+      issuer: "https://auth2.example.com",
+      clientID: "123",
+      fetch: (a, b) => Promise.resolve(auth.request(a, b)),
+    })
+    await expect(bareClient.getSession(tokens.access)).rejects.toThrow()
+  })
+})

@@ -442,3 +442,68 @@ describe("user info", () => {
     expect(userinfo).toStrictEqual({ userID: "123" })
   })
 })
+
+describe("api.useSession", () => {
+  let tokens: { access: string; refresh: string }
+  let client: ReturnType<typeof createClient>
+
+  beforeEach(async () => {
+    client = createClient({
+      issuer: "https://auth.example.com",
+      clientID: "123",
+      fetch: (a, b) => Promise.resolve(auth.request(a, b)),
+    })
+    const { challenge, url } = await client.authorize(
+      "https://client.example.com/callback",
+      "code",
+    )
+    let response = await auth.request(url)
+    response = await auth.request(response.headers.get("location")!, {
+      headers: { cookie: response.headers.get("set-cookie")! },
+    })
+    const location = new URL(response.headers.get("location")!)
+    const code = location.searchParams.get("code")
+    const exchanged = await client.exchange(
+      code!,
+      "https://client.example.com/callback",
+      challenge.verifier,
+    )
+    if (exchanged.err) throw exchanged.err
+    tokens = exchanged.tokens
+  })
+
+  test("resolves the current user in-process, no HTTP round-trip", async () => {
+    const session = await auth.api.useSession({
+      headers: new Headers({ Authorization: `Bearer ${tokens.access}` }),
+    })
+    expect(session).toStrictEqual({
+      type: "user",
+      properties: { userID: "123" },
+    })
+  })
+
+  test("returns null for a missing or malformed Authorization header", async () => {
+    expect(await auth.api.useSession({ headers: new Headers() })).toBeNull()
+    expect(
+      await auth.api.useSession({
+        headers: new Headers({ Authorization: "not-a-bearer-token" }),
+      }),
+    ).toBeNull()
+  })
+
+  test("returns null for a garbage token", async () => {
+    const session = await auth.api.useSession({
+      headers: new Headers({ Authorization: "Bearer garbage" }),
+    })
+    expect(session).toBeNull()
+  })
+})
+
+describe("handler", () => {
+  test("is an alias for fetch", async () => {
+    const response = await auth.handler(
+      new Request("https://auth.example.com/.well-known/oauth-authorization-server"),
+    )
+    expect(response.status).toBe(200)
+  })
+})

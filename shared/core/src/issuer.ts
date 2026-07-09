@@ -1209,5 +1209,53 @@ export function issuer<
     return c.redirect(url.toString())
   })
 
-  return app
+  // In-process session lookup for routes mounted alongside the issuer on
+  // the same app (see examples/hono's /avatar, /profile) - verifies the
+  // bearer token against this issuer's own signing key directly, no HTTP
+  // round-trip the way a genuinely separate resource server's
+  // `client.verify()` call needs. Deliberately doesn't check the `iss`
+  // claim (unlike /userinfo) - a bare `Headers` has no request URL to
+  // derive the expected issuer from, so this trades that one check for not
+  // needing a full Hono `Context`. Everything else (signature, expiry,
+  // subject shape) is still verified.
+  async function getSessionFromHeaders(headers: Headers) {
+    const auth = headers.get("authorization")
+    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined
+    if (!token) return null
+    try {
+      const result = await jwtVerify<{
+        mode: "access"
+        type: keyof Subjects
+        properties: StandardSchemaV1.InferInput<Subjects[keyof Subjects]>
+      }>(token, () => signingKey().then((item) => item.public))
+      if (result.payload.mode !== "access") return null
+      const validated = await input.subjects[result.payload.type][
+        "~standard"
+      ].validate(result.payload.properties)
+      if (validated.issues) return null
+      return {
+        type: result.payload.type,
+        properties: validated.value,
+      } as SubjectPayload<Subjects>
+    } catch {
+      return null
+    }
+  }
+
+  Object.assign(app, {
+    api: {
+      useSession: (input: { headers: Headers }) =>
+        getSessionFromHeaders(input.headers),
+    },
+    handler: (request: Request) => app.fetch(request),
+  })
+
+  return app as typeof app & {
+    api: {
+      useSession: (input: {
+        headers: Headers
+      }) => Promise<SubjectPayload<Subjects> | null>
+    }
+    handler: (request: Request) => Promise<Response>
+  }
 }

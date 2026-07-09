@@ -2,6 +2,32 @@ import { PropsWithChildren } from "hono/jsx"
 import css from "./ui.css" with { type: "text" }
 import { getTheme } from "./theme.js"
 
+// Zero-framework, vanilla JS - matches the rest of this UI (server-rendered
+// hono/jsx, no client-side framework dependency). Two things: a password
+// show/hide toggle (delegated click listener, driven by data-* attributes
+// like everything else here), and a submit-loading state that disables the
+// button on submit to prevent double-posts.
+const INTERACTIVITY_SCRIPT = `
+document.addEventListener("click", (e) => {
+  const toggle = e.target.closest("[data-toggle-password]")
+  if (!toggle) return
+  const input = toggle.previousElementSibling
+  if (!input) return
+  input.type = input.type === "password" ? "text" : "password"
+  toggle.setAttribute("data-visible", input.type === "text" ? "true" : "false")
+})
+document.addEventListener("submit", (e) => {
+  const form = e.target
+  if (form.getAttribute("data-component") !== "form") return
+  const button = form.querySelector('button[data-component="button"]')
+  if (button && !button.disabled) {
+    button.disabled = true
+    button.dataset.originalText = button.textContent
+    button.textContent = "..."
+  }
+})
+`.trim()
+
 export function Layout(
   props: PropsWithChildren<{
     size?: "small"
@@ -73,6 +99,7 @@ export function Layout(
         {theme?.css && (
           <style dangerouslySetInnerHTML={{ __html: theme.css }} />
         )}
+        <script dangerouslySetInnerHTML={{ __html: INTERACTIVITY_SCRIPT }} />
       </head>
       <body>
         <div data-component="root">

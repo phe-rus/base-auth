@@ -34,6 +34,62 @@ import { Layout } from "./base.js"
 import "./form.js"
 import { FormAlert } from "./form.js"
 
+/**
+ * A password `<input>` with a show/hide toggle - the toggle button's click
+ * handling lives in `Layout`'s vanilla-JS script (`base.tsx`, delegated
+ * listener on `[data-toggle-password]`), not here, since this file never
+ * runs client-side.
+ */
+function PasswordField(props: {
+  name: string
+  placeholder: string
+  required?: boolean
+  autofocus?: boolean
+  autoComplete?: "current-password" | "new-password"
+  value?: string
+}) {
+  return (
+    <div data-component="input-group">
+      <input data-component="input" type="password" {...props} />
+      <button type="button" data-toggle-password aria-label="Show password">
+        <svg
+          data-slot="icon-eye"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+          />
+        </svg>
+        <svg
+          data-slot="icon-eye-off"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+          />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 const DEFAULT_COPY = {
   /**
    * Error message when email is already taken.
@@ -180,11 +236,9 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
               autofocus={!error}
               value={form?.get("email")?.toString()}
             />
-            <input
-              data-component="input"
+            <PasswordField
               autofocus={error?.type === "invalid_password"}
               required
-              type="password"
               name="password"
               placeholder={copy.input_password}
               autoComplete="current-password"
@@ -244,10 +298,8 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
                   required
                   placeholder={copy.input_email}
                 />
-                <input
-                  data-component="input"
+                <PasswordField
                   autofocus={passwordError}
-                  type="password"
                   name="password"
                   placeholder={copy.input_password}
                   required
@@ -256,9 +308,7 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
                   }
                   autoComplete="new-password"
                 />
-                <input
-                  data-component="input"
-                  type="password"
+                <PasswordField
                   name="repeat"
                   required
                   autofocus={passwordError}
@@ -294,6 +344,20 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
               </>
             )}
           </form>
+          {state.type === "code" && (
+            <form method="post">
+              <input type="hidden" name="action" value="register" />
+              <div data-component="form-footer">
+                <span>
+                  {copy.code_return}{" "}
+                  <a data-component="link" href="authorize">
+                    {copy.login.toLowerCase()}
+                  </a>
+                </span>
+                <button data-component="link">{copy.code_resend}</button>
+              </div>
+            </form>
+          )}
         </Layout>
       ) as string
       return new Response(jsx.toString(), {
@@ -352,10 +416,8 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
             {state.type === "update" && (
               <>
                 <input type="hidden" name="action" value="update" />
-                <input
-                  data-component="input"
+                <PasswordField
                   autofocus
-                  type="password"
                   name="password"
                   placeholder={copy.input_password}
                   required
@@ -364,9 +426,7 @@ export function PasswordUI(input: PasswordUIOptions): PasswordConfig {
                   }
                   autoComplete="new-password"
                 />
-                <input
-                  data-component="input"
-                  type="password"
+                <PasswordField
                   name="repeat"
                   required
                   value={
