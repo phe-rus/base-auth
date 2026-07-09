@@ -20,6 +20,14 @@ export const Route = createRootRoute({
   component: RootComponent,
 })
 
+// Matches www's default - respects system dark/light preference, no toggle
+// UI (not needed for a bare reference example).
+const THEME_SCRIPT = `
+if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  document.documentElement.classList.add("dark")
+}
+`.trim()
+
 function RootComponent() {
   return (
     <RootDocument>
@@ -33,15 +41,16 @@ function RootDocument({ children }: PropsWithChildren) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-neutral-950 text-neutral-100">
-        <nav className="sticky top-0 z-10 flex gap-4 border-b border-neutral-800 bg-neutral-950/80 p-4 backdrop-blur">
+      <body className="min-h-screen">
+        <nav className="sticky top-0 z-10 flex gap-4 border-b border-border bg-background/80 p-4 backdrop-blur">
           <Link to="/" className="font-semibold">
             Base Auth
           </Link>
           <Link to="/profile">Profile</Link>
         </nav>
-        <main className="p-6">{children}</main>
+        <main className="container py-6">{children}</main>
         <Scripts />
       </body>
     </html>

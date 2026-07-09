@@ -6,6 +6,13 @@ import {
   getCookie,
   setCookie,
 } from "@tanstack/react-start/server"
+import { useForm } from "@tanstack/react-form"
+import { IconLogout, IconUpload } from "@tabler/icons-react"
+import { Button, buttonVariants } from "~/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
+import { Input } from "~/components/ui/input"
+import { Label } from "~/components/ui/label"
+import { Separator } from "~/components/ui/separator"
 import { client, issuerUrl, subjects } from "../lib/auth"
 import { redirectUri } from "../lib/config"
 
@@ -121,19 +128,16 @@ function Account() {
 
   if (!state.signedIn) {
     return (
-      <main className="mx-auto max-w-md px-6 py-24 text-center">
+      <main className="container max-w-md py-24 text-center">
         <h1 className="text-2xl font-bold">Account</h1>
-        <p className="mt-3 text-neutral-400">
+        <p className="mt-3 text-muted-foreground">
           Sign in against <code>{issuerUrl}</code> (the <code>hono</code>{" "}
           example, by default) to see a real account page - current user,
           avatar upload, and profile updates, all built on this project's
           own client library.
         </p>
-        <a
-          href={state.url}
-          className="mt-6 inline-block rounded bg-white px-5 py-2.5 font-medium text-neutral-950"
-        >
-          Sign in
+        <a href={state.url} className="mt-6 inline-block">
+          <Button size="lg">Sign in</Button>
         </a>
       </main>
     )
@@ -150,28 +154,27 @@ function SignedIn({
   onSignOut: () => void
 }) {
   const [profile, setProfile] = useState(initial)
-  const [name, setName] = useState(profile.preferredName ?? "")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     profile.avatar ?? null,
   )
-  const [savingName, setSavingName] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  async function onSaveName(e: React.FormEvent) {
-    e.preventDefault()
-    setSavingName(true)
-    setError(null)
-    try {
-      const updated = await updatePreferredName({ data: { preferredName: name } })
-      setProfile(updated)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed")
-    } finally {
-      setSavingName(false)
-    }
-  }
+  const form = useForm({
+    defaultValues: { preferredName: profile.preferredName ?? "" },
+    onSubmit: async ({ value }) => {
+      setError(null)
+      try {
+        const updated = await updatePreferredName({
+          data: { preferredName: value.preferredName },
+        })
+        setProfile(updated)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Update failed")
+      }
+    },
+  })
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -198,17 +201,13 @@ function SignedIn({
   }
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-16">
+    <main className="container max-w-lg py-16">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Account</h1>
-        <button
-          type="button"
-          onClick={onLogout}
-          disabled={loggingOut}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:text-white"
-        >
+        <Button variant="outline" size="sm" onClick={onLogout} disabled={loggingOut}>
+          <IconLogout className="size-4" />
           {loggingOut ? "Signing out..." : "Log out"}
-        </button>
+        </Button>
       </div>
 
       <div className="mt-6 flex items-center gap-4">
@@ -216,11 +215,18 @@ function SignedIn({
           <img
             src={avatarUrl}
             alt=""
-            className="h-16 w-16 rounded-full object-cover"
+            className="size-16 rounded-full object-cover ring-1 ring-border"
             onError={() => setAvatarUrl(null)}
           />
         )}
-        <label className="inline-block cursor-pointer rounded bg-white px-4 py-2 text-sm font-medium text-neutral-950">
+        <Label
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+            className: "cursor-pointer",
+          })}
+        >
+          <IconUpload className="size-4" />
           {uploading ? "Uploading..." : "Upload avatar"}
           <input
             type="file"
@@ -229,47 +235,66 @@ function SignedIn({
             disabled={uploading}
             onChange={onFileChange}
           />
-        </label>
+        </Label>
       </div>
 
-      <dl className="mt-8 space-y-3 text-sm">
-        <div className="flex justify-between border-b border-neutral-800 pb-3">
-          <dt className="text-neutral-500">Email</dt>
-          <dd>{profile.email ?? "-"}</dd>
-        </div>
-        <div className="flex justify-between border-b border-neutral-800 pb-3">
-          <dt className="text-neutral-500">Role</dt>
-          <dd>{profile.role}</dd>
-        </div>
-        <div className="flex justify-between border-b border-neutral-800 pb-3">
-          <dt className="text-neutral-500">Member since</dt>
-          <dd>{new Date(profile.createdAt).toLocaleDateString()}</dd>
-        </div>
-      </dl>
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Email</span>
+            <span>{profile.email ?? "-"}</span>
+          </div>
+          <Separator />
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Role</span>
+            <span>{profile.role}</span>
+          </div>
+          <Separator />
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Member since</span>
+            <span>{new Date(profile.createdAt).toLocaleDateString()}</span>
+          </div>
+        </CardContent>
+      </Card>
 
-      <form onSubmit={onSaveName} className="mt-8">
-        <label className="block text-sm text-neutral-400" htmlFor="preferredName">
-          Preferred name
-        </label>
-        <div className="mt-2 flex gap-2">
-          <input
-            id="preferredName"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="How should we address you?"
-            className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-          />
-          <button
-            type="submit"
-            disabled={savingName}
-            className="shrink-0 rounded bg-white px-4 py-2 text-sm font-medium text-neutral-950"
-          >
-            {savingName ? "Saving..." : "Save"}
-          </button>
-        </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          form.handleSubmit()
+        }}
+        className="mt-8"
+      >
+        <form.Field name="preferredName">
+          {(field) => (
+            <>
+              <Label htmlFor={field.name}>Preferred name</Label>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="How should we address you?"
+                />
+                <form.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
+                    <Button type="submit" disabled={isSubmitting} className="shrink-0">
+                      {isSubmitting ? "Saving..." : "Save"}
+                    </Button>
+                  )}
+                </form.Subscribe>
+              </div>
+            </>
+          )}
+        </form.Field>
       </form>
 
-      {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+      {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
     </main>
   )
 }

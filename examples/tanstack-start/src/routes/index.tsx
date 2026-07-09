@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { setCookie } from "@tanstack/react-start/server"
+import { Button } from "~/components/ui/button"
 import { client, issuerUrl } from "../lib/auth"
 import { redirectUri } from "../lib/config"
 
@@ -28,15 +29,12 @@ function Home() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Base Auth - TanStack Start example</h1>
-      <p className="text-neutral-400">
+      <p className="text-muted-foreground">
         Signs in against the issuer at <code>{issuerUrl}</code> (the{" "}
         <code>hono</code> example, by default).
       </p>
-      <a
-        href={url}
-        className="inline-block rounded bg-white px-4 py-2 font-medium text-neutral-950"
-      >
-        Sign in
+      <a href={url} className="inline-block">
+        <Button>Sign in</Button>
       </a>
     </div>
   )

@@ -2,6 +2,9 @@ import { useState } from "react"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { getCookie, setCookie } from "@tanstack/react-start/server"
+import { IconUpload } from "@tabler/icons-react"
+import { Label } from "~/components/ui/label"
+import { buttonVariants } from "~/components/ui/button"
 import { client, issuerUrl, subjects } from "../lib/auth"
 
 const getProfile = createServerFn().handler(async () => {
@@ -90,7 +93,7 @@ function Profile() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Profile</h1>
-      <p className="text-neutral-400">
+      <p className="text-muted-foreground">
         Protected route - resolved via client.verify().
       </p>
 
@@ -99,11 +102,12 @@ function Profile() {
           <img
             src={avatarUrl}
             alt=""
-            className="h-16 w-16 rounded-full object-cover"
+            className="size-16 rounded-full object-cover ring-1 ring-border"
             onError={() => setAvatarUrl(null)}
           />
         )}
-        <label className="inline-block cursor-pointer rounded bg-white px-4 py-2 font-medium text-neutral-950">
+        <Label className={buttonVariants({ variant: "outline", className: "cursor-pointer" })}>
+          <IconUpload className="size-4" />
           {uploading ? "Uploading..." : "Upload avatar"}
           <input
             type="file"
@@ -112,11 +116,11 @@ function Profile() {
             disabled={uploading}
             onChange={onFileChange}
           />
-        </label>
+        </Label>
       </div>
-      {error && <p className="mt-2 text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-destructive">{error}</p>}
 
-      <pre className="mt-4 rounded bg-neutral-900 p-4">
+      <pre className="no-scrollbar mt-4 overflow-x-auto rounded-lg border border-border bg-muted/40 p-4">
         {JSON.stringify(profile, null, 2)}
       </pre>
     </div>
