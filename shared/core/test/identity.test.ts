@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { findOrCreateUserByAccount } from "../src/adapter/identity.js"
+import {
+  findOrCreateUserByAccount,
+  updateUserProfile,
+} from "../src/adapter/identity.js"
 import { FakeAdapter } from "./fake-adapter.js"
 
 describe("findOrCreateUserByAccount", () => {
@@ -48,5 +51,39 @@ describe("findOrCreateUserByAccount", () => {
     expect(github.id).not.toBe(password.id)
     expect(await adapter.findMany({ model: "user" })).toHaveLength(2)
     expect(await adapter.findMany({ model: "account" })).toHaveLength(2)
+  })
+})
+
+describe("updateUserProfile", () => {
+  test("updates only the given fields on the given user", async () => {
+    const adapter = FakeAdapter()
+    const alice = await findOrCreateUserByAccount(adapter, {
+      providerId: "password",
+      accountId: "alice@example.com",
+    })
+    const bob = await findOrCreateUserByAccount(adapter, {
+      providerId: "password",
+      accountId: "bob@example.com",
+    })
+
+    const updated = await updateUserProfile(adapter, alice.id, {
+      avatar: "https://example.com/alice.png",
+    })
+
+    expect(updated.avatar).toBe("https://example.com/alice.png")
+    expect(updated.id).toBe(alice.id)
+
+    const bobRow = await adapter.findOne<{ avatar?: string }>({
+      model: "user",
+      where: [{ field: "id", value: bob.id }],
+    })
+    expect(bobRow?.avatar).toBeUndefined()
+  })
+
+  test("throws when the user doesn't exist", async () => {
+    const adapter = FakeAdapter()
+    await expect(
+      updateUserProfile(adapter, "nonexistent", { avatar: "x" }),
+    ).rejects.toThrow()
   })
 })

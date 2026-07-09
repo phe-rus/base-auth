@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "types": ["@cloudflare/workers-types"],
@@ -9,5 +10,5 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
-  "include": ["issuer.ts"]
+  "include": ["issuer.ts", "schema.ts", "env.d.ts"]
 }

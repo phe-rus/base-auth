@@ -83,3 +83,22 @@ export async function findOrCreateUserByAccount(
   })
   return newUser
 }
+
+/**
+ * Updates profile fields on an already-existing user - the counterpart to
+ * `findOrCreateUserByAccount`'s creation-only `profile` argument. Only the
+ * fields passed in `profile` are changed; anything omitted is left as-is.
+ */
+export async function updateUserProfile(
+  adapter: Adapter,
+  userId: string,
+  profile: UserProfile,
+): Promise<User> {
+  const updated = await adapter.update<User>({
+    model: "user",
+    where: [{ field: "id", value: userId }],
+    data: { ...profile, updatedAt: new Date() },
+  })
+  if (!updated) throw new Error(`No user found with id ${userId}`)
+  return updated
+}

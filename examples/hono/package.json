@@ -3,14 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-gen": "wrangler types --env-interface Env",
+    "db:gen": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:local": "wrangler d1 migrations apply base-auth-example --local",
+    "db:remote": "wrangler d1 migrations apply base-auth-example --remote",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
+    "local": "bun run db:gen && bun run db:local",
+    "remote": "bun run local && bun run db:remote"
   },
   "dependencies": {
+    "@base-auth/adapter-drizzle": "workspace:*",
     "@base-auth/core": "workspace:*",
+    "@base-auth/roles": "workspace:*",
+    "@base-auth/username": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.28",
     "valibot": "1.4.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260708.1",
+    "drizzle-kit": "0.31.10",
     "wrangler": "4.107.1"
   }
 }

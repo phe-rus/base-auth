@@ -9,6 +9,7 @@ export type {
 export { coreModels } from "./adapter.js"
 export {
   findOrCreateUserByAccount,
+  updateUserProfile,
   type FindOrCreateUserByAccountInput,
   type User,
   type UserProfile,

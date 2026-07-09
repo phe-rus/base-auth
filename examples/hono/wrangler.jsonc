@@ -9,5 +9,19 @@
       "binding": "AUTH_KV",
       "id": "placeholder-run-wrangler-kv-namespace-create"
     }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "base-auth-example",
+      "database_id": "placeholder-run-wrangler-d1-create",
+      "migrations_dir": "./.migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AVATARS",
+      "bucket_name": "base-auth-example-avatars"
+    }
   ]
 }
