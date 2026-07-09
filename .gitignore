@@ -9,7 +9,8 @@ dist-ssr
 .vinxi
 __unconfig*
 
-.claude
+.claude/*
+!.claude/decisions.md
 .agents
 
 # environment variables

@@ -1,114 +1,115 @@
-<p align="center">
-  <a href="https://openauth.js.org">
-    <picture>
-      <source srcset="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/logo-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/logo-light.svg" media="(prefers-color-scheme: light)">
-      <img src="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/logo-light.svg" alt="OpenAuth logo">
-    </picture>
-  </a>
-</p>
-<p align="center">
-  <a href="https://sst.dev/discord"><img alt="Discord" src="https://img.shields.io/discord/983865673656705025?style=flat-square&label=Discord" /></a>
-  <a href="https://www.npmjs.com/package/@base-auth/core"><img alt="npm" src="https://img.shields.io/npm/v/%40openauthjs%2Fcore?style=flat-square" /></a>
-  <a href="https://github.com/toolbeam/openauth/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/toolbeam/openauth/release.yml?style=flat-square&branch=master" /></a>
-</p>
+# Base Auth
 
----
+**Base Auth by Pherus** is a self-hosted, OAuth 2.1-compliant identity
+provider - a fork of [SST's OpenAuth](https://github.com/toolbeam/openauth)
+(MIT licensed) being rebuilt with a generic database adapter layer, an
+opt-in plugin system, and real user profile fields, while keeping OpenAuth's
+core idea: a centralized auth server that runs on your own infrastructure
+and speaks standard OAuth, so any OAuth client can use it.
 
-> **Base Auth by Pherus** is a fork of [SST's OpenAuth](https://github.com/toolbeam/openauth) (MIT licensed), being rebuilt into a self-hosted-first auth platform with opt-in plugins (roles, passkeys, 2FA, username) and a management dashboard. The rest of this README still describes the upstream OpenAuth project and will be rewritten as the fork progresses.
+- **Self-hosted**: runs entirely on your own infrastructure - Node.js, Bun,
+  or Cloudflare Workers. No SaaS dependency.
+- **Standards-based**: implements OAuth 2.1 - authorization code flow with
+  mandatory PKCE (`S256`), no implicit grant. Any OAuth 2.1 client can use it.
+- **Database-agnostic**: a generic `Adapter` interface, not a hardcoded ORM.
+  A Drizzle implementation ships today (`@base-auth/adapter-drizzle`);
+  anything satisfying the interface works.
+- **Pluggable**: an opt-in plugin system (`@base-auth/roles`, `@base-auth/username`
+  today) for capabilities that sit alongside authentication without being
+  baked into core.
+- **Customizable UI**: prebuilt, themeable screens (built on `hono/jsx`) for
+  password auth, or opt out and implement your own.
+- **User profiles, without prescribing a data model**: optional
+  `email`/`preferredName`/`avatar` fields, first-user-is-admin, optional
+  email verification - all opt-in, none of it forces a schema on you beyond
+  what you enable.
 
-[OpenAuth](https://openauth.js.org) is a standards-based auth provider for web apps, mobile apps, single pages apps, APIs, or 3rd party clients. It is currently in beta.
+## Quick start
 
-- **Universal**: You can deploy it as a standalone service or embed it into an existing application. It works with any framework or platform.
-- **Self-hosted**: It runs entirely on your infrastructure and can be deployed on Node.js, Bun, AWS Lambda, or Cloudflare Workers.
-- **Standards-based**: It implements the OAuth 2.0 spec and is based on web standards. So any OAuth client can use it.
-- **Customizable**: It comes with prebuilt themeable UI that you can customize or opt out of.
+```bash
+git clone <this-repo>
+cd base-auth
+bun install
+bun run dev
+```
 
-<picture>
-  <source srcset="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/assets/themes-dark.png" media="(prefers-color-scheme: dark)">
-  <source srcset="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/assets/themes-light.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/toolbeam/identity/main/openauth/assets/themes-light.png" alt="OpenAuth themes">
-</picture>
+This starts every example and the docs site concurrently via Turborepo:
 
-## Quick Start
+| App | Port | What it is |
+| --- | --- | --- |
+| `examples/hono` | `8787` | Full local backend - D1 + KV + R2 via `wrangler dev`, idiomatic Hono, avatar uploads |
+| `examples/playground` | `3005` | Fast-iteration example - `bun:sqlite`, every plugin enabled, no build step |
+| `examples/tanstack-start` | `3001` | Client app - signs in against `examples/hono`, PKCE + httpOnly cookies |
+| `www` | `3000` | Docs site |
 
-If you just want to get started as fast as possible you can jump straight into the [code examples](https://github.com/toolbeam/openauth/tree/master/examples) folder and copy paste away. There are also [SST components](https://sst.dev/docs/component/aws/auth) for deploying everything OpenAuth needs.
+Pick whichever example matches how you want to run this and read its source
+- they're meant to be copied from, not just run.
 
-## Approach
+## Project structure
 
-While there are many open source solutions for auth, almost all of them are libraries that are meant to be embedded into a single application. Centralized auth servers typically are delivered as SaaS services - eg Auth0 or Clerk.
+```
+shared/
+  core/               @base-auth/core - issuer, client, adapter contract,
+                       providers, storage backends, themeable UI
+  adapter-drizzle/     @base-auth/adapter-drizzle - Drizzle implementation of
+                       the Adapter interface + a schema generator
+  roles/               @base-auth/roles - role assignment plugin
+  username/            @base-auth/username - username plugin
+examples/
+  hono/                D1 + KV + R2 via wrangler, idiomatic Hono composition
+  playground/          bun:sqlite, hot-reloadable, every plugin enabled
+  tanstack-start/       Client consuming examples/hono - PKCE, avatar upload UI
+www/                  Docs site (TanStack Start + Vite)
+```
 
-OpenAuth instead is a centralized auth server that runs on your own infrastructure and has been designed for ease of self hosting. It can be used to authenticate all of your applications - web apps, mobile apps, internal admin tools, etc.
+Everything in `shared/` is published as `@base-auth/<name>`; everything in
+`examples/` is private and exists to be read, not installed.
 
-It adheres mostly to OAuth 2.0 specifications - which means anything that can speak OAuth can use it to receive access and refresh tokens. When a client initiates an authorization flow, OpenAuth will hand off to one of the configured providers - this can be third party identity providers like Google, GitHub, etc or built in flows like email/password or pin code.
+## Core concepts
 
-Because it follows these specifications it can even be used to issue credentials for third party applications - allowing you to implement "login with myapp" flows.
-
-OpenAuth very intentionally does not attempt to solve user management. We've found that this is a very difficult problem given the wide range of databases and drivers that are used in the JS ecosystem. Additionally it's quite hard to build data abstractions that work for every use case. Instead, once a user has identified themselves OpenAuth will invoke a callback where you can implement your own user lookup/creation logic.
-
-While OpenAuth tries to be mostly stateless, it does need to store a minimal amount of data (refresh tokens, password hashes, etc). However this has been reduced to a simple KV store with various implementations for zero overhead systems like Cloudflare KV and DynamoDB. You should never need to directly access any data that is stored in there.
-
-There is also a themeable UI that you can use to get going without implementing any designs yourself. This is built on top of a lower level system so you can copy paste the default UI and tweak it or opt out entirely and implement your own.
-
-Finally, OpenAuth is created by the maintainers of [SST](https://sst.dev) which is a tool to manage all the infrastructure for your app. It contains components for OpenAuth that make deploying it to AWS or Cloudflare as simple as it can get.
-
-## Tutorial
-
-We'll show how to deploy the auth server and then a sample app that uses it.
-
-### Auth server
-
-Start by importing the `issuer` function from the `@base-auth/core` package.
+### The issuer
 
 ```ts
 import { issuer } from "@base-auth/core"
-```
 
-OpenAuth is built on top of [Hono](https://github.com/honojs/hono) which is a minimal web framework that can run anywhere. The `issuer` function creates a Hono app with all of the auth server implemented that you can then deploy to AWS Lambda, Cloudflare Workers, or in a container running under Node.js or Bun.
-
-The `issuer` function requires a few things:
-
-```ts
 const app = issuer({
-  providers: { ... },
-  storage,
   subjects,
-  success: async (ctx, value) => { ... }
+  storage,
+  providers: { ... },
+  adapter,   // optional - omit for a stateless, DB-less issuer
+  plugins: [ ... ],  // optional
+  success: async (ctx, value) => { ... },
 })
 ```
 
-First we need to define some providers that are enabled - these are either third party identity providers like Google, GitHub, etc or built in flows like email/password or pin code. You can also implement your own. Let's try the GitHub provider.
+`issuer` returns a [Hono](https://hono.dev) app implementing the full OAuth
+2.1 authorization-code + PKCE flow, `/token`, `/userinfo`, and
+`/.well-known/*` discovery endpoints. Deploy it anywhere Hono runs:
 
 ```ts
-import { GithubProvider } from "@base-auth/core/provider/github"
+// Bun / Cloudflare Workers
+export default app
 
-const app = issuer({
-  providers: {
-    github: GithubProvider({
-      clientID: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      scopes: ["user:email"],
-    }),
-  },
-  ...
-})
+// Cloudflare Workers, idiomatic style (see examples/hono)
+import { env } from "cloudflare:workers"
+const app = new Hono()
+app.route("/", issuer({ ... }))
+export default app
+
+// Node.js
+import { serve } from "@hono/node-server"
+serve(app)
+
+// AWS Lambda
+import { handle } from "hono/aws-lambda"
+export const handler = handle(app)
 ```
 
-Providers take some configuration - since this is a third party identity provider there is no UI to worry about and all it needs is a client ID, secret and some scopes. Let's add the password provider which is a bit more complicated.
+### Providers
 
-```ts
-import { PasswordProvider } from "@base-auth/core/provider/password"
-
-const app = issuer({
-  providers: {
-    github: ...,
-    password: PasswordProvider(...),
-  },
-  ...
-})
-```
-
-The password provider is quite complicated as username/password involve a lot of flows so there are a lot of callbacks to implement. However you can opt into the default UI which has all of this already implemented for you. The only thing you have to specify is how to send a code for forgot password/email verification. In this case we'll log the code but you would send this over email.
+Built-in `PasswordProvider` (paired with the themeable `PasswordUI`), plus a
+long list of third-party OAuth2/OIDC providers (GitHub, Google, Discord,
+Slack, Microsoft, and more), all under `@base-auth/core/provider/*`.
 
 ```ts
 import { PasswordProvider } from "@base-auth/core/provider/password"
@@ -116,198 +117,185 @@ import { PasswordUI } from "@base-auth/core/ui/password"
 
 const app = issuer({
   providers: {
-    github: ...,
     password: PasswordProvider(
       PasswordUI({
-        sendCode: async (email, code) => {
-          console.log(email, code)
+        // optional - defaults to true. false skips email verification
+        // entirely and completes registration immediately.
+        verify: true,
+        sendCode: async ({ email, code, url }) => {
+          // send an email with the code (and optionally a link to `url`)
         },
+        // optional - falls back to sendCode if omitted. Lets you send
+        // different copy for "verify your account" vs "reset your password".
+        sendResetCode: async ({ email, code, url }) => { ... },
       }),
     ),
   },
-  ...
+  // ...
 })
 ```
 
-Next up is the `subjects` field. Subjects are what the access token generated at the end of the auth flow will map to. Under the hood, the access token is a JWT that contains this data. You will likely just have a single subject to start but you can define additional ones for different types of users.
+### Subjects
+
+What the access token (a signed JWT) resolves to. Validated with any
+[standard-schema](https://github.com/standard-schema/standard-schema)-compatible
+library - [valibot](https://valibot.dev) is what the examples use.
 
 ```ts
-import { object, string } from "valibot"
+import { object, optional, string } from "valibot"
+import { createSubjects } from "@base-auth/core/subject"
 
 const subjects = createSubjects({
   user: object({
-    userID: string(),
-    // may want to add workspaceID here if doing a multi-tenant app
-    workspaceID: string(),
+    id: string(),
+    email: optional(string()),
+    role: string(),
   }),
 })
 ```
 
-Note we are using [valibot](https://github.com/fabian-hiller/valibot) to define the shape of the subject so it can be validated properly. You can use any validation library that is following the [standard-schema specification](https://github.com/standard-schema/standard-schema) - the next version of Zod will support this.
+### The adapter & identity resolution
 
-You typically will want to place subjects in its own file as it can be imported by all of your apps. You can pass it to the issuer in the `subjects` field.
-
-```ts
-import { subjects } from "./subjects.js"
-
-const app = issuer({
-  providers: { ... },
-  subjects,
-  ...
-})
-```
-
-Next we'll implement the `success` callback which receives the payload when a user successfully completes a provider flow.
+`Adapter` is a generic, ORM-agnostic interface - core has no idea Drizzle
+exists. `@base-auth/adapter-drizzle` is the implementation that ships today.
 
 ```ts
+import { drizzleAdapter } from "@base-auth/adapter-drizzle"
+import {
+  findOrCreateUserByAccount,
+  updateUserProfile,
+} from "@base-auth/core/adapter"
+
+const adapter = drizzleAdapter(db, { provider: "sqlite", schema })
+
 const app = issuer({
-  providers: { ... },
-  subjects,
-  async success(ctx, value) {
-    let userID
+  adapter,
+  success: async (ctx, value) => {
     if (value.provider === "password") {
-      console.log(value.email)
-      userID = ... // lookup user or create them
+      const user = await findOrCreateUserByAccount(
+        adapter,
+        { providerId: "password", accountId: value.email },
+        { email: value.email }, // only applied on first creation
+      )
+      return ctx.subject("user", { id: user.id, email: user.email })
     }
-    if (value.provider === "github") {
-      console.log(value.tokenset.access)
-      userID = ... // lookup user or create them
-    }
-    return ctx.subject("user", {
-      userID,
-      'a workspace id'
-    })
-  }
+    throw new Error("Invalid provider")
+  },
 })
 ```
 
-Note all of this is typesafe - based on the configured providers you will receive different properties in the `value` object. Also the `subject` method will only accept properties. Note - most callbacks in OpenAuth can return a `Response` object. In this case if something goes wrong, you can return a `Response.redirect("...")` sending them to a different place or rendering an error.
+`updateUserProfile(adapter, userId, { avatar: url })` updates an *existing*
+user - see `examples/hono`'s `/avatar` upload endpoint for a full example.
 
-Next we have the `storage` field which defines where things like refresh tokens and password hashes are stored. If on AWS we recommend DynamoDB, if on Cloudflare we recommend Cloudflare KV. We also have a MemoryStore used for testing.
+### Plugins
+
+Opt-in capabilities that sit alongside authentication - they mount their own
+routes and can declare their own tables, without owning a DB connection
+(they receive the shared `adapter` through `ctx`).
 
 ```ts
-import { MemoryStorage } from "@base-auth/core/storage/memory"
+import { RolesPlugin, getUserRole } from "@base-auth/roles"
+import { UsernamePlugin } from "@base-auth/username"
 
 const app = issuer({
-  providers: { ... },
-  subjects,
-  async success(ctx, value) { ... },
-  storage: MemoryStorage(),
+  adapter,
+  plugins: [RolesPlugin(), UsernamePlugin()],
+  success: async (ctx, value) => {
+    const user = await findOrCreateUserByAccount(adapter, { ... })
+    const role = await getUserRole(adapter, user.id) // first user ever -> "admin"
+    return ctx.subject("user", { id: user.id, role })
+  },
 })
 ```
 
-And now we are ready to deploy! Here's how you do that depending on your infrastructure.
+To wire a plugin's tables into your own schema (needed for any real
+database, not the ephemeral test adapters):
 
 ```ts
-// Bun
-export default app
+import { generateSqliteSchema } from "@base-auth/adapter-drizzle"
+import { coreModels } from "@base-auth/core/adapter"
+import { roleModels } from "@base-auth/roles"
+import { usernameModels } from "@base-auth/username"
 
-// Cloudflare
-export default app
-
-// Lambda
-import { handle } from "hono/aws-lambda"
-export const handler = handle(app)
-
-// Node.js
-import { serve } from "@hono/node-server"
-serve(app)
+export const schema = generateSqliteSchema({
+  ...coreModels,
+  ...roleModels,
+  ...usernameModels,
+})
 ```
 
-You now have a centralized auth server. Test it out by visiting `/.well-known/oauth-authorization-server` - you can see a live example [here](https://auth.terminal.shop/.well-known/oauth-authorization-server).
+Then run your ORM's normal migration workflow against `schema.ts` - see
+`examples/hono` (D1) or `examples/playground` (`bun:sqlite`) for the full
+setup, including `drizzle-kit`/`wrangler d1 migrations` wiring.
 
-### Auth client
-
-Since this is a standard OAuth server you can use any libraries for OAuth and it will work. OpenAuth does provide some light tooling for this although even a manual flow is pretty simple. You can create a client like this:
+### The client
 
 ```ts
 import { createClient } from "@base-auth/core/client"
 
 const client = createClient({
-  clientID: "my-client",
-  issuer: "https://auth.myserver.com", // url to the OpenAuth server
+  clientID: "my-app",
+  issuer: "https://auth.example.com",
 })
 ```
 
-#### SSR Sites
-
-If your frontend has a server component you can use the code flow. Redirect the user here
-
-```ts
-const { url } = await client.authorize(
-  <redirect-uri>,
-  "code"
-)
-```
-
-You can make up a `client_id` that represents your app. This will initiate the auth flow and user will be redirected to the `redirect_uri` you provided with a query parameter `code` which you can exchange for an access token.
+PKCE is always used - OAuth 2.1 makes it mandatory for every client, not
+just SPAs.
 
 ```ts
-// the redirect_uri is the original redirect_uri you passed in and is used for verification
-const tokens = await client.exchange(query.get("code"), redirect_uri)
-console.log(tokens.access, tokens.refresh)
-```
+// Start the flow - `challenge.verifier` needs to survive the redirect
+// (httpOnly cookie for SSR apps, sessionStorage for SPAs).
+const { url, challenge } = await client.authorize(redirectURI, "code")
 
-You likely want to store both the access token and refresh token in an HTTP only cookie so they are sent up with future requests. Then you can use the `client` to verify the tokens.
-
-```ts
-const verified = await client.verify(subjects, cookies.get("access_token")!, {
-  refresh: cookies.get("refresh_token") || undefined,
-})
-console.log(
-  verified.subject.type,
-  verified.subject.properties,
-  verified.refresh,
-  verified.access,
-)
-```
-
-Passing in the refresh token is optional but if you do, this function will automatically refresh the access token if it has expired. It will return a new access token and refresh token which you should set back into the cookies.
-
-#### SPA Sites, Mobile apps, etc
-
-In cases where you do not have a server, you can use the `token` flow with `pkce` on the frontend.
-
-```ts
-const { challenge, url } = await client.authorize(<redirect_uri>, "code", { pkce: true })
-localStorage.setItem("challenge", JSON.stringify(challenge))
-location.href = url
-```
-
-When the auth flow is complete the user's browser will be redirected to the `redirect_uri` with a `code` query parameter. You can then exchange the code for access/refresh tokens.
-
-```ts
-const challenge = JSON.parse(localStorage.getItem("challenge"))
-const exchanged = await client.exchange(
-  query.get("code"),
-  redirect_uri,
-  challenge.verifier,
-)
+// After the redirect back, exchange the code
+const exchanged = await client.exchange(code, redirectURI, challenge.verifier)
 if (exchanged.err) throw new Error("Invalid code")
-localStorage.setItem("access_token", exchanged.tokens.access)
-localStorage.setItem("refresh_token", exchanged.tokens.refresh)
+const { access, refresh } = exchanged.tokens
+
+// Verify a token (optionally auto-refreshing if it's expired)
+const verified = await client.verify(subjects, access, { refresh })
+if (verified.err) throw verified.err
+console.log(verified.subject.properties)
 ```
 
-Then when you make requests to your API you can include the access token in the `Authorization` header.
+A resource server (a *separate* backend receiving requests with a
+`Authorization: Bearer <token>` header) verifies tokens the exact same way -
+construct a `client` pointed at the issuer and call `.verify()`. See
+`examples/hono`'s `/avatar` upload endpoint for a real example of this
+pattern in a genuinely different role than "the issuer."
 
-```ts
-const accessToken = localStorage.getItem("access_token")
-fetch("https://auth.example.com/api/user", {
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-  },
-})
+## Development
+
+```bash
+bun install       # after pulling, or after adding any workspace dependency
+bun run dev        # all examples + www, via turbo
+bun run build        # @base-auth/core only
+bun run test           # @base-auth/core only
 ```
 
-And then you can verify the access token on the server.
+Per-package, when iterating on one thing:
 
-```ts
-const verified = await client.verify(subjects, accessToken)
-console.log(verified.subject)
+```bash
+cd shared/core && bun test
+cd shared/roles && bun test
+cd examples/hono && bun run dev             # wrangler dev
+cd examples/tanstack-start && bun run dev    # vite dev
 ```
 
----
+`examples/hono`'s D1 database is local-only, via `wrangler dev`'s
+simulation:
 
-OpenAuth is created by the maintainers of [SST](https://sst.dev).
+```bash
+cd examples/hono
+bun run dev      # first run creates the local D1/KV/R2 state
+bun run local     # drizzle-kit generate + wrangler d1 migrations apply --local
+```
 
-**Join our community** [Discord](https://sst.dev/discord) | [YouTube](https://www.youtube.com/c/sst-dev) | [X.com](https://x.com/SST_dev)
+See `CLAUDE.md` for the fuller architecture/conventions reference, and
+`.claude/decisions.md` for the reasoning behind specific non-obvious choices
+(OAuth 2.1 changes, the adapter/plugin split, why certain things are wired
+the way they are).
+
+## License
+
+MIT, forked from [SST's OpenAuth](https://github.com/toolbeam/openauth).
