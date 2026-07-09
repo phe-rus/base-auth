@@ -12,6 +12,7 @@ import { PasswordUI } from "@base-auth/core/ui/password"
 import {
   findOrCreateUserByAccount,
   updateUserProfile,
+  type User,
 } from "@base-auth/core/adapter"
 import { drizzleAdapter } from "@base-auth/adapter-drizzle"
 import { UsernamePlugin } from "@base-auth/username"
@@ -82,42 +83,46 @@ app.route(
 // Auth access token: build a client pointed at the issuer (here, that's
 // our own origin, since this example happens to run both) and verify the
 // bearer token against it.
-app.post(
-  "/avatar",
-  cors({
-    origin: "*",
-    allowHeaders: ["*"],
-    allowMethods: ["POST"],
-    credentials: false,
-  }),
-  async (c) => {
-    const auth = c.req.header("Authorization")
-    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined
-    if (!token) return c.json({ error: "Missing bearer token" }, 401)
+async function verifyBearer(c: import("hono").Context) {
+  const auth = c.req.header("Authorization")
+  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined
+  if (!token) return null
 
-    const client = createClient({
-      issuer: new URL(c.req.url).origin,
-      clientID: "avatar-upload",
-    })
-    const verified = await client.verify(subjects, token)
-    if (verified.err) return c.json({ error: "Invalid token" }, 401)
+  const client = createClient({
+    issuer: new URL(c.req.url).origin,
+    clientID: "resource-server",
+  })
+  const verified = await client.verify(subjects, token)
+  if (verified.err) return null
+  return verified.subject.properties
+}
 
-    const fd = await c.req.formData()
-    const file = fd.get("avatar")
-    if (!(file instanceof File))
-      return c.json({ error: "Missing avatar file" }, 400)
+const resourceCors = cors({
+  origin: "*",
+  allowHeaders: ["*"],
+  allowMethods: ["GET", "POST", "PATCH"],
+  credentials: false,
+})
 
-    const userId = verified.subject.properties.id
-    await env.AVATARS.put(`avatars/${userId}`, file, {
-      httpMetadata: { contentType: file.type },
-    })
+app.post("/avatar", resourceCors, async (c) => {
+  const subject = await verifyBearer(c)
+  if (!subject) return c.json({ error: "Invalid or missing bearer token" }, 401)
 
-    const url = `${new URL(c.req.url).origin}/avatar/${userId}`
-    await updateUserProfile(adapter, userId, { avatar: url })
+  const fd = await c.req.formData()
+  const file = fd.get("avatar")
+  if (!(file instanceof File))
+    return c.json({ error: "Missing avatar file" }, 400)
 
-    return c.json({ url })
-  },
-)
+  const userId = subject.id
+  await env.AVATARS.put(`avatars/${userId}`, file, {
+    httpMetadata: { contentType: file.type },
+  })
+
+  const url = `${new URL(c.req.url).origin}/avatar/${userId}`
+  await updateUserProfile(adapter, userId, { avatar: url })
+
+  return c.json({ url })
+})
 
 app.get("/avatar/:userId", async (c) => {
   const object = await env.AVATARS.get(`avatars/${c.req.param("userId")}`)
@@ -127,6 +132,39 @@ app.get("/avatar/:userId", async (c) => {
       "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
     },
   })
+})
+
+// GET/PATCH /profile: the "current user" primitive for an account page -
+// deliberately distinct from the standard /userinfo endpoint above (which
+// only re-derives from the JWT's claims at issuance time, per OAuth spec).
+// This reads fresh from D1, so it reflects anything changed after the
+// token was issued (an avatar upload, a preferredName update).
+app.get("/profile", resourceCors, async (c) => {
+  const subject = await verifyBearer(c)
+  if (!subject) return c.json({ error: "Invalid or missing bearer token" }, 401)
+
+  const user = await adapter.findOne<User>({
+    model: "user",
+    where: [{ field: "id", value: subject.id }],
+  })
+  if (!user) return c.json({ error: "User not found" }, 404)
+
+  const role = await getUserRole(adapter, user.id)
+  return c.json({ ...user, role })
+})
+
+app.patch("/profile", resourceCors, async (c) => {
+  const subject = await verifyBearer(c)
+  if (!subject) return c.json({ error: "Invalid or missing bearer token" }, 401)
+
+  const body = await c.req.json<{ preferredName?: string }>()
+  if (typeof body.preferredName !== "string")
+    return c.json({ error: "Missing preferredName" }, 400)
+
+  const user = await updateUserProfile(adapter, subject.id, {
+    preferredName: body.preferredName,
+  })
+  return c.json(user)
 })
 
 export default app

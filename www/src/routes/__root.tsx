@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "A self-hosted, standards-based auth server - roles, passkeys, 2FA, and usernames as opt-in plugins.",
+          "A self-hosted, OAuth 2.1 auth server - roles and usernames as opt-in plugins, a generic adapter over a database you own.",
       },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
@@ -47,6 +47,9 @@ function RootDocument({ children }: PropsWithChildren) {
           <nav className="flex gap-6 text-sm text-neutral-300">
             <Link to="/docs" className="hover:text-white">
               Docs
+            </Link>
+            <Link to="/account" className="hover:text-white">
+              Account
             </Link>
             <a
               href="https://github.com/phe-rus/base-auth"

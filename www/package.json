@@ -8,11 +8,13 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@base-auth/core": "workspace:*",
     "@tanstack/react-router": "1.170.17",
     "@tanstack/react-router-devtools": "1.167.0",
     "@tanstack/react-start": "1.168.27",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "valibot": "1.4.2"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.43.1",

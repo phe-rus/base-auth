@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Code, H1, H2, List, P, Pre } from "../../components/prose"
+import { Card, CardGrid, Code, H1, H2, List, P, Pre } from "../../components/prose"
 
 export const Route = createFileRoute("/docs/")({
   component: DocsIndex,
@@ -18,9 +18,8 @@ function DocsIndex() {
         >
           SST's OpenAuth
         </a>{" "}
-        and rebuilt into something you fully own: self-hosted, with roles,
-        passkeys, 2FA, and usernames as opt-in plugins instead of a fixed
-        service.
+        and rebuilt into something you fully own: self-hosted, with roles
+        and usernames as opt-in plugins instead of a fixed service.
       </P>
 
       <List>
@@ -33,8 +32,8 @@ function DocsIndex() {
           infrastructure: Node, Bun, Lambda, or Cloudflare Workers.
         </li>
         <li>
-          <strong>Standards-based</strong> - implements OAuth 2.0. Any OAuth
-          client can use it.
+          <strong>OAuth 2.1</strong> - authorization code flow with
+          mandatory PKCE, no implicit grant. Any OAuth 2.1 client can use it.
         </li>
         <li>
           <strong>Your schema, your dialect</strong> - the adapter is a
@@ -51,18 +50,19 @@ function DocsIndex() {
       <P>
         Base Auth is a centralized auth server that runs on your own
         infrastructure, designed for self-hosting from the start. It adheres
-        to OAuth 2.0, so anything that can speak OAuth can use it to receive
+        to OAuth 2.1, so anything that can speak OAuth can use it to receive
         access and refresh tokens - including third-party "login with your
-        app" flows.
+        app" flows. See the <a href="/docs/architecture" className="underline">architecture guide</a>{" "}
+        for exactly how that separation works.
       </P>
       <P>
         It intentionally doesn't solve user management for you the way a
         typical framework might - once a user has identified themselves, it
         invokes a callback where you look up or create them. What it does
         provide is a generic, ORM-agnostic <Code>Adapter</Code> contract for
-        durable data (users, and whatever a plugin's own models need), and a
-        <Code>Plugin</Code> interface so roles, usernames, 2FA, and passkeys
-        can mount onto the issuer without core needing to know they exist.
+        durable data (users, and whatever a plugin's own models need), and a{" "}
+        <Code>Plugin</Code> interface so roles and usernames can mount onto
+        the issuer without core needing to know they exist.
       </P>
 
       <H2>Quick example</H2>
@@ -74,7 +74,7 @@ export default issuer({
   subjects,
   providers: {
     password: PasswordProvider(PasswordUI({
-      sendCode: async (email, code) => { /* email it */ },
+      sendCode: async ({ email, code, url }) => { /* email it */ },
     })),
   },
   success: async (ctx, value) => {
@@ -84,14 +84,24 @@ export default issuer({
     throw new Error("Invalid provider")
   },
 })`}</Pre>
-      <P>
-        See the <a href="/docs/quickstart" className="underline">quickstart</a> for
-        a full walkthrough with a real client app, or the{" "}
-        <a href="/docs/issuer" className="underline">
-          issuer() reference
-        </a>{" "}
-        for the complete API.
-      </P>
+
+      <H2>Next</H2>
+      <CardGrid>
+        <Card href="/docs/quickstart" title="Quickstart">
+          A full walkthrough with a real client app - two examples running
+          together.
+        </Card>
+        <Card href="/docs/architecture" title="Architecture">
+          Separating the backend from the frontend, and how a third-party
+          app integrates.
+        </Card>
+        <Card href="/docs/issuer" title="issuer() reference">
+          The complete configuration surface.
+        </Card>
+        <Card href="/account" title="Account page">
+          A real account page built on this project's own client library.
+        </Card>
+      </CardGrid>
     </div>
   )
 }
