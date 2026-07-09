@@ -10,9 +10,9 @@ choices, see `.claude/decisions.md` - this file is the map, that file is the
 
 ## Stack
 
-- **Runtime**: Bun (workspace root, `shared/*` packages, `examples/playground`,
-  `examples/hono`'s tooling), Cloudflare Workers (`examples/hono` and
-  `examples/tanstack-start`/`www` at runtime, via `wrangler`/`nodejs_compat`)
+- **Runtime**: Bun (workspace root, `shared/*` packages, `examples/hono`'s
+  tooling), Cloudflare Workers (`examples/hono` and `examples/tanstack-start`/`www`
+  at runtime, via `wrangler`/`nodejs_compat`)
 - **Language**: TypeScript, strict
 - **HTTP**: [Hono](https://hono.dev) - the issuer is a Hono app; UI is
   server-rendered via `hono/jsx`
@@ -22,7 +22,10 @@ choices, see `.claude/decisions.md` - this file is the map, that file is the
 - **DB**: [Drizzle ORM](https://orm.drizzle.team) for the one adapter that
   ships today (`@base-auth/adapter-drizzle`), targeting SQLite/D1
 - **Frontend examples**: [TanStack Start](https://tanstack.com/start) + Vite
-  + React + Tailwind (`examples/tanstack-start`, `www`)
+  + React + Tailwind (`examples/tanstack-start`, `www`) - shadcn/ui (`base-ui`
+  primitives, not Radix) + `@tabler/icons-react` + TanStack Form for actual
+  forms (the account page). `www`'s docs content is markdown
+  (`src/documents/*.md`), not JSX - see "Docs are markdown" below.
 - **Monorepo**: Bun workspaces + Turborepo (`turbo.json`)
 - **Jose** for JWT signing/verification, **arctic** for third-party OAuth
   provider plumbing
@@ -39,9 +42,8 @@ shared/
   username/            @base-auth/username - username plugin
 examples/
   hono/                Full local backend: D1 + KV + R2, idiomatic Hono,
-                       avatar upload. The "how would I really run this" example.
-  playground/          Fast-iteration example: bun:sqlite, runs straight off
-                       shared/core/src (no build step), every plugin enabled.
+                       avatar upload. The one backend example - "how would
+                       I really run this."
   tanstack-start/      Client app consuming examples/hono as its issuer -
                        PKCE flow, httpOnly cookies, profile page.
 www/                  Docs site (TanStack Start + Vite)
@@ -57,16 +59,22 @@ publishable (see `.changeset/config.json`); everything under `examples/` is
   (`shared/core/src/issuer.ts`) builds and returns a Hono app implementing
   the full OAuth 2.1 authorization-code + PKCE flow, `/token`, `/userinfo`,
   `/.well-known/*`. `adapter` and `plugins` are optional - an issuer can run
-  with zero persistence beyond the `storage` backend (see `examples/hono`
-  before Phase 4, or think of it as "issuer-only, no user database").
+  with zero persistence beyond the `storage` backend. The returned app also
+  carries `.api.useSession({ headers })` (in-process bearer-token session
+  lookup, no HTTP round-trip - see `examples/hono`'s `/avatar`/`/profile`)
+  and `.handler` (alias for `.fetch`) - both additive, `app.route("/", issuer({...}))`
+  and `.fetch()` still work exactly as before. Only root-mounting is
+  supported - see `.claude/decisions.md` for why subpath mounting isn't.
 
 - **`Adapter`** (`shared/core/src/adapter/adapter.ts`) is the generic,
   ORM-agnostic contract (`create`/`findOne`/`findMany`/`update`/`delete`/`count`)
   every storage backend implements. Core has no idea Drizzle exists - it's
   just the one implementation that ships. `coreModels` declares the `user`/`account`
-  tables' shape declaratively (`ModelDefinition`/`FieldDefinition`), so a
-  generator (`generateSqliteSchema`) can turn them into real tables in
-  whichever app owns the schema.
+  tables' shape declaratively (`ModelDefinition`/`FieldDefinition`).
+  `generateSqliteSchema()` turns that into live tables for ephemeral test
+  fixtures only - a real app generates an actual, committed `schema.ts` via
+  `bunx @base-auth/adapter-drizzle generate` instead (see `examples/hono`'s
+  `schema.config.ts`), which it then owns and can hand-edit.
 
 - **Plugins** (`shared/core/src/plugin/index.ts`) mount their own routes the
   same way providers do, but don't participate in OAuth provider selection -
@@ -86,9 +94,13 @@ publishable (see `.changeset/config.json`); everything under `examples/` is
 - **Providers** (`shared/core/src/provider/*.ts`): `PasswordProvider` (with
   `PasswordUI` for the default themeable screens) plus a long list of OAuth2/OIDC
   providers (GitHub, Google, Discord, Slack, Microsoft, etc., all built on
-  `arctic`). `PasswordConfig.verify` makes email verification optional;
-  `sendCode`/`sendResetCode` take `{ email, code, url }` and are separate
-  callbacks (the latter falls back to the former).
+  `arctic`). `PasswordConfig.verify` is opt-in (default `false`) - registration
+  completes immediately unless an app turns it on; `sendCode`/`sendResetCode`
+  take `{ email, code, url }` and are separate callbacks (the latter falls
+  back to the former). The hosted UI (`ui/password.tsx`, `ui/base.tsx`) has a
+  password show/hide toggle and a submit-loading state, both plain vanilla JS
+  (`Layout`'s inline `<script>`) - still zero framework dependency, still
+  hono/jsx.
 
 - **Storage** (`shared/core/src/storage/*.ts`): pluggable backends for
   OAuth protocol state (codes, refresh tokens) - `MemoryStorage`,
@@ -98,7 +110,21 @@ publishable (see `.changeset/config.json`); everything under `examples/` is
 
 - **Client** (`shared/core/src/client.ts`): `createClient({ clientID, issuer })`
   for anything consuming a Base Auth issuer - `authorize()`, `exchange()`,
-  `verify()`, `refresh()`. PKCE is unconditional (OAuth 2.1).
+  `verify()`, `refresh()`. PKCE is unconditional (OAuth 2.1). Optionally pass
+  `subjects` at construction to unlock `client.getSession(token)` - sugar for
+  `verify(subjects, token)` without repeating the schema on every call.
+
+## Docs are markdown
+
+`www`'s docs content lives in `www/src/documents/*.md` (frontmatter:
+`title`, `description`), not JSX. Each `www/src/routes/docs/*.tsx` file is a
+thin wrapper - `import raw from "~/documents/x.md?raw"`, `parseDoc(raw)`
+(`~/lib/docs.ts`, gray-matter + marked), render via `<DocPage frontmatter={...} html={...} />`
+(`~/components/doc-page.tsx`), set `head()` from `docHead(frontmatter)`
+(`~/lib/doc-head.ts`) for title/meta/OG tags. Editing a doc is editing
+markdown - adding a new one means a new `.md` file, a matching thin route
+file (same four-line pattern every other one uses), and a sidebar entry in
+`docs/route.tsx`'s `navGroups`.
 
 ## OAuth 2.1 compliance
 
@@ -144,7 +170,6 @@ cd shared/core && bun test
 cd shared/roles && bun test
 cd examples/hono && bun run dev        # wrangler dev, port 8787
 cd examples/tanstack-start && bun run dev   # vite dev, port 3001
-cd examples/playground && bun run dev  # bun --watch issuer.ts, port 3005
 cd www && bun run dev                  # vite dev, port 3000
 ```
 
@@ -167,6 +192,14 @@ bun run local           # db:gen (drizzle-kit generate) + db:local (wrangler d1
                         # migrations apply --local) - run after any schema.ts change
 bun run dev             # restart to pick up the new tables
 ```
+
+`schema.ts` isn't hand-written from scratch - it's generated once via
+`bun run schema:gen` (`base-auth-drizzle generate --config ./schema.config.ts`,
+see `shared/adapter-drizzle/src/cli.ts`) and then owned/edited like any
+other file from there. **Deliberately not** wired into `local`/`db:gen` -
+those run on every schema change and would silently clobber any hand edits
+if `schema:gen` ran automatically alongside them. Only re-run `schema:gen`
+if you actually want to blow the file away and start over.
 
 `bun run type-gen` (`wrangler types --env-interface Env`) is available but
 its output isn't wired into `tsconfig.json` - see `.claude/decisions.md` for
@@ -196,9 +229,12 @@ trusting a green typecheck.
 
 ## Roadmap
 
-Phase 3 (OAuth 2.1, optional verification, profile fields, first-user-admin)
-and Phase 4 (D1 + R2 in `examples/hono`, avatar upload, idiomatic Hono) are
-done. Phase 5, next: redesign `www` closer to bun.com's docs structure/visual
-quality, add an account-management UI (current user, logout, update profile),
-and document separating the auth backend from the frontend + how third-party
-apps integrate.
+Phase 3 (OAuth 2.1, optional verification, profile fields, first-user-admin),
+Phase 4 (D1 + R2 in `examples/hono`, avatar upload, idiomatic Hono), Phase 5
+(www redesign, account-management UI, backend/frontend + third-party
+integration docs), and Phase 6 (schema-as-a-generated-file, opt-in email
+verification, hosted-UI polish, shadcn/tabler/TanStack Form in `www` and
+`examples/tanstack-start`, markdown-driven docs with real provider/adapter/plugin/client
+reference pages, the `.api.useSession()`/`client.getSession()` session API,
+`examples/playground` removed as redundant) are done. Nothing queued next as
+of this writing - check with the user before assuming there's a Phase 7.

@@ -38,9 +38,8 @@ This starts every example and the docs site concurrently via Turborepo:
 | App | Port | What it is |
 | --- | --- | --- |
 | `examples/hono` | `8787` | Full local backend - D1 + KV + R2 via `wrangler dev`, idiomatic Hono, avatar uploads |
-| `examples/playground` | `3005` | Fast-iteration example - `bun:sqlite`, every plugin enabled, no build step |
 | `examples/tanstack-start` | `3001` | Client app - signs in against `examples/hono`, PKCE + httpOnly cookies |
-| `www` | `3000` | Docs site |
+| `www` | `3000` | Docs site + a real account-management page, built on shadcn/ui + TanStack Form |
 
 Pick whichever example matches how you want to run this and read its source
 - they're meant to be copied from, not just run.
@@ -57,7 +56,6 @@ shared/
   username/            @base-auth/username - username plugin
 examples/
   hono/                D1 + KV + R2 via wrangler, idiomatic Hono composition
-  playground/          bun:sqlite, hot-reloadable, every plugin enabled
   tanstack-start/       Client consuming examples/hono - PKCE, avatar upload UI
 www/                  Docs site (TanStack Start + Vite)
 ```
@@ -119,8 +117,8 @@ const app = issuer({
   providers: {
     password: PasswordProvider(
       PasswordUI({
-        // optional - defaults to true. false skips email verification
-        // entirely and completes registration immediately.
+        // optional - opt-in, off by default. Registration completes
+        // immediately unless you turn this on.
         verify: true,
         sendCode: async ({ email, code, url }) => {
           // send an email with the code (and optionally a link to `url`)
@@ -208,25 +206,33 @@ const app = issuer({
 })
 ```
 
-To wire a plugin's tables into your own schema (needed for any real
-database, not the ephemeral test adapters):
+To wire a plugin's tables into your own schema, describe which models you
+want in a `schema.config.ts`:
 
 ```ts
-import { generateSqliteSchema } from "@base-auth/adapter-drizzle"
+import { defineSchemaConfig } from "@base-auth/adapter-drizzle"
 import { coreModels } from "@base-auth/core/adapter"
 import { roleModels } from "@base-auth/roles"
 import { usernameModels } from "@base-auth/username"
 
-export const schema = generateSqliteSchema({
-  ...coreModels,
-  ...roleModels,
-  ...usernameModels,
+export default defineSchemaConfig({
+  dialect: "sqlite",
+  models: { ...coreModels, ...roleModels, ...usernameModels },
+  columnCase: "snake_case", // or "camelCase"
 })
 ```
 
+then run `bunx @base-auth/adapter-drizzle generate --config ./schema.config.ts`
+to write a real `schema.ts` - an ordinary, hand-editable Drizzle file (not a
+function call re-run on every boot), the same way `drizzle-kit generate`
+produces migrations you own. Rename a column, add a field, whatever the app
+needs - re-running `generate` overwrites the file, so generate once and own
+it from there. See `examples/hono`'s `schema.config.ts`/`schema.ts` for the
+real thing.
+
 Then run your ORM's normal migration workflow against `schema.ts` - see
-`examples/hono` (D1) or `examples/playground` (`bun:sqlite`) for the full
-setup, including `drizzle-kit`/`wrangler d1 migrations` wiring.
+`examples/hono` for the full setup, including `drizzle-kit`/`wrangler d1
+migrations` wiring.
 
 ### The client
 
@@ -263,6 +269,26 @@ A resource server (a *separate* backend receiving requests with a
 construct a `client` pointed at the issuer and call `.verify()`. See
 `examples/hono`'s `/avatar` upload endpoint for a real example of this
 pattern in a genuinely different role than "the issuer."
+
+If your resource-server code happens to live in the same process as the
+issuer, skip the `client` entirely - `issuer()`'s own return value carries
+`auth.api.useSession({ headers })`, which verifies in-process with no HTTP
+round-trip:
+
+```ts
+const auth = issuer({ ... })
+app.route("/", auth)
+
+app.get("/whoami", async (c) => {
+  const session = await auth.api.useSession({ headers: c.req.raw.headers })
+  if (!session) return c.json({ error: "Unauthorized" }, 401)
+  return c.json(session)
+})
+```
+
+Configure `subjects` on `createClient` to unlock `client.getSession(token)` -
+sugar for `client.verify(subjects, token)` without repeating the schema on
+every call.
 
 ## Development
 

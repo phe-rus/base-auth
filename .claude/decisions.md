@@ -6,6 +6,48 @@ with the reasoning behind them. Git history has the diffs; this has the
 this before changing any of the areas below - if you're about to reintroduce
 something listed here as "removed" or "rejected," there was a reason.
 
+## Session API (`issuer().api.useSession()`, `.handler`, `client.getSession()`)
+
+- **`issuer()` still returns a real Hono app** - `.api`/`.handler` are
+  additive properties bolted on with `Object.assign` plus a type-level
+  intersection cast at the return site, not a restructure into a
+  `{handler, api}`-only wrapper object the way better-auth's `betterAuth()`
+  works. `app.route("/", issuer({...}))` and `issuer({...}).fetch(request)`
+  both still work completely unchanged - this was a deliberate choice to
+  stay additive rather than risk the mounting-model rewrite a `{handler,
+  api}`-only return type would force (see below).
+- **`useSession({ headers })` doesn't check the `iss` JWT claim**, unlike
+  `/userinfo`. A bare `Headers` object has no request URL to derive the
+  expected issuer from the way `getRelativeUrl` does for every other
+  same-origin check in this file - rather than require a full Hono
+  `Context` just for that one claim, this trades it away. Signature,
+  expiry, and subject-shape validation are all still enforced.
+- **Only root-mounting (`app.route("/", issuer({...}))`) is supported.**
+  `issuer()`'s internal `issuer(ctx)` helper (confusingly, same name as the
+  outer factory function - it computes the issuer's own base URL for
+  `.well-known` responses and `iss` claims) does `new URL(getRelativeUrl(ctx, "/")).origin`
+  - it discards any mount-path prefix entirely. Mounting under a subpath
+  (`app.on([...], "/api/auth", (c) => auth.handler(c.req.raw))`, the
+  better-auth-style convention) would silently break every advertised
+  discovery URL, since they'd all be computed as if mounted at root. Fixing
+  that would mean auditing this helper and every `getRelativeUrl` call site
+  in the file for prefix-awareness - a real, separate piece of work, not
+  something to casually take on alongside adding `.handler` as a naming
+  convenience. `.handler` today is just `app.fetch.bind(app)` - it works
+  fine, but only when actually mounted at root.
+- **`client.getSession(token)`** is sugar for `client.verify(subjects, token)`
+  using a `subjects` schema configured once via `createClient({ subjects })`,
+  not a zero-argument, cookie-reading client the way better-auth's
+  browser-side `authClient.getSession()` is. That's a deliberate scope cut:
+  this project's access tokens live in httpOnly cookies set by the
+  *consuming app*, not the issuer, specifically so client-side JS can't
+  read them (XSS protection - see `examples/tanstack-start`/`www`'s
+  avatar-upload server-function-proxy pattern, which exists entirely
+  because of this). A client-side `getSession()` with real automatic cookie
+  reading would mean either giving up httpOnly or building cross-origin
+  cookie-forwarding infrastructure that doesn't exist yet - out of scope
+  here, `token` is still an explicit, required argument.
+
 ## Identity & data layer
 
 - **`Adapter` is a generic, ORM-agnostic interface** (`create`/`findOne`/
@@ -19,10 +61,27 @@ something listed here as "removed" or "rejected," there was a reason.
   configures the adapter once; every plugin receives it through `ctx` in its
   `init(route, ctx)`. A plugin that needs its own tables declares them via a
   `models: Record<string, ModelDefinition>` field (declarative, dialect-agnostic
-  field descriptions), which `@base-auth/adapter-drizzle`'s `generateSqliteSchema`
-  turns into real Drizzle tables in the *app's own* schema file. Neither core
-  nor the plugin packages own a migration path - the app does, by committing
-  its own `schema.ts` and running its own migrations. See `shared/core/src/plugin/index.ts`.
+  field descriptions). Neither core nor the plugin packages own a migration
+  path - the app does, by committing its own `schema.ts` and running its own
+  migrations. See `shared/core/src/plugin/index.ts`.
+
+- **Schema generation is a CLI, not a runtime function call.**
+  `@base-auth/adapter-drizzle`'s `generateSqliteSchema()` still exists and
+  still turns `ModelDefinition`s into live Drizzle table objects in memory -
+  but that's now only for ephemeral test fixtures (`shared/roles/test`,
+  `shared/username/test`), not what a real app's `schema.ts` should call.
+  The "app owns its schema" story turned out to only be true in theory as
+  long as the schema was re-derived from a function call on every boot -
+  there was no actual file to rename a column in or add a custom field to.
+  `bunx @base-auth/adapter-drizzle generate --config ./schema.config.ts`
+  (`generateSqliteSchemaSource()` + `cli.ts`) now writes a literal,
+  ordinary Drizzle schema file instead - generate once, then it's a normal
+  file you own and hand-edit, the same relationship a real app has with
+  `drizzle-kit generate`'s migration output. Re-running `generate`
+  overwrites the file (no diff/merge tooling), so it's deliberately **not**
+  wired into `examples/hono`'s `local`/`db:gen` scripts - those run on every
+  schema change and would silently clobber hand edits if `schema:gen` ran
+  alongside them automatically.
 
 - **Identity resolution lives in core, not per-provider.** `findOrCreateUserByAccount`
   and `updateUserProfile` (`shared/core/src/adapter/identity.ts`) are the one
@@ -62,13 +121,18 @@ something listed here as "removed" or "rejected," there was a reason.
 
 ## Password provider
 
-- **Email verification is optional** (`PasswordConfig.verify`, default
-  `true`). When `false`, registration completes immediately after
-  `action=register` instead of transitioning into the code-verification
-  state - no code is generated or sent. `sendCode` becomes optional in that
-  case, but is still required for the forgot-password flow regardless (that
-  flow always needs to prove email ownership, independent of whether new
-  registrations are verified).
+- **Email verification is opt-in** (`PasswordConfig.verify`, default
+  `false` - changed from an earlier `true` default once it became clear
+  requiring every app to actively opt *out* was backwards for a feature
+  most won't want). When left at the default, registration completes
+  immediately after `action=register` instead of transitioning into the
+  code-verification state - no code is generated or sent. `sendCode`
+  becomes optional in that case, but is still required for the
+  forgot-password flow regardless (that flow always needs to prove email
+  ownership, independent of whether new registrations are verified).
+  `examples/hono` sets `verify: true` explicitly, since it's meant to be
+  the "full" example and the quickstart docs walk through watching a code
+  arrive in the terminal.
 
 - **`sendCode`/`sendResetCode` take one object param (`{ email, code, url }`),
   not positional args**, and are two separate callbacks (`sendResetCode`
@@ -143,15 +207,15 @@ something listed here as "removed" or "rejected," there was a reason.
   updated to declare it). If `examples/hono`'s subject shape changes, this
   file has to change too, or fields will vanish with no error.
 
-## `examples/playground`
+## `examples/playground` was removed
 
-- **Deliberately stays on `bun:sqlite`, not D1.** It's the fast-iteration
-  example (runs straight off `shared/core/src` via the `bun` export
-  condition, `bun --watch` reflects source edits immediately, no
-  build/publish step) - adding D1 here would duplicate what `examples/hono`
-  now demonstrates without adding anything. It's also the one example wired
-  with every plugin (`UsernamePlugin`, `RolesPlugin`) for quick local
-  testing of plugin behavior.
+- It existed as the fast-iteration example while core was still moving
+  fast (`bun:sqlite`, ran straight off `shared/core/src`, no build step).
+  Once `examples/hono` became the full D1/KV/R2 backend with every plugin
+  wired, playground stopped demonstrating anything hono didn't already
+  cover - removed rather than kept as a redundant third example. If you
+  find a reference to it anywhere, that's stale - there are two examples
+  now, `hono` (backend) and `tanstack-start` (client).
 
 ## Testing / tooling gotchas
 
